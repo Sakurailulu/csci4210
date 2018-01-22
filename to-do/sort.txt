@@ -1,0 +1,12 @@
+top
+bottom
+3
+left
+right
+front
+1
+back
+outside
+inside
+2
+reverse
