@@ -1,3 +1,7 @@
+## MacOS related
+*.pdf
+.DS_Store
+
 ## C
 # Prerequisites
 *.d
