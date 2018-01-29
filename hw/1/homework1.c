@@ -16,6 +16,7 @@
  * the first and last *number* unique words with a count of ocurrences.
  */
 
+#include <assert.h>
 #include <ctype.h>
 #include <dirent.h>
 #include <stdbool.h>
@@ -80,15 +81,19 @@ void parseRegFiles( DIR * dir, struct Word * words ) {
                 do {
                     char c = fgetc( f );
                     if ( feof( f ) ) {
+#ifdef DEBUG_MODE
+                        printf( "here, now\n" );
+#endif
                         break;
                     } else {
-                        if ( c != ' ' ) {
+                        if ( isalnum( c ) ) {
                             temp[i] = c;
                             ++i;
-                        } else {
-                            strcat( "\0", temp);
+                        } else if ( isalnum( temp[1] ) ) {
+                            temp[i] = '\0';
                             printf( "%s\n", temp );
                             memset( temp, 0, 80 );
+                            i = 0;
                         }
                         // printf( "%c", c );
                     }
@@ -132,19 +137,20 @@ int main( int argc, char * argv[] ) {
 
         DIR * dir = opendir( argv[1] );
         if ( dir != NULL ) {
-            // if ( hasRegFiles( dir ) ) {
+            // int changeDir = chdir( argv[1] );
+            // if ( chdir( argv[1] ) == 0 ) {
+            if ( true ) {
 #ifdef DEBUG_MODE
-            printf( "regular files...\n" );
+                printf( "regular files...\n" );
 #endif
 
-            struct Word * words = calloc( 32, sizeof( struct Word ) );
-            printf( "Allocated initial parallel arrays of size 32.\n" );
-            parseRegFiles( dir, words );
-            ( void )closedir( dir );
-
-            // } else {
-            //     fprintf( stderr, "ERROR: directory does not contain regular files.\n" );
-            // }
+                struct Word * words = calloc( 32, sizeof( struct Word ) );
+                printf( "Allocated initial parallel arrays of size 32.\n" );
+                parseRegFiles( dir, words );
+                ( void )closedir( dir );
+            } else {
+                fprintf( stderr, "ERROR: could not change to directory.\n" );
+            }
         } else {
             fprintf( stderr, "ERROR: directory does not exist.\n" );
         }
