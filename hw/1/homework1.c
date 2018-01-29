@@ -2,91 +2,156 @@
  * Griffin Melnick, melnig@rpi.edu
  *
  * Emulating a file directory and text manipulation program, we parse 
- * through all usable files in a given directory to find the words versus
- * unique words using one of the following command line calls
+ * through all regular files in a given directory to find the words 
+ * versus unique words using one of the following command line calls
  *
- *   bash$ *executable* *directory*
+ *   bash$ ./a.out <directory>
  *
  *   OR
  *
- *   bash$ *executable* *directory* *number*
+ *   bash$ ./a.out <directory> <word-count>
  *
  * The first call parses through the directory and gives all unique 
  * words with a count of ocurrences, whereas the second call only gives
  * the first and last *number* unique words with a count of ocurrences.
  */
 
+#include <ctype.h>
 #include <dirent.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
 
 struct Word {
-    char * _word;
+    char _word[80];
     int _count;
 };
 
-bool findFiles( char * dirName, char * files[] ) {
-    DIR * dir = opendir( dirName );
-    if ( dir != NULL ) {
 
+/* ------------------------------------------------------------------------- */
+/* ------------------------------------------------------------------------- */
+
+
+/* bool hasRegFiles( DIR * dir ) {
 #ifdef DEBUG_MODE
-        printf( "good directory\n" );
-        fflush( stdout );
+    printf( "checking for regular files...\n" );
 #endif
 
-        struct dirent * file;
-        struct lstat info;
-        while ( ( file = readdir( dir ) ) != NULL ) {
-            lstat( file->d_name, &info );
-            printf( "File: %s.", file->d_name );
-            printf( "File mode: %d.\n", info->st_mode );
-            fflush( stdout );
+    bool hasReg = false;
+    struct dirent * file;
+    while ( ( file = readdir( dir ) ) != NULL ) {
+        struct stat info;
+        lstat( file->d_name, &info );
+
+        if ( info.st_mode == 33188 ) {
+            hasReg = true;
         }
-        free( file );
-        return true;
-
-    } else {
-
-#ifdef DEBUG_MODE
-        printf( "bad directory\n" );
-        fflush( stdout );
-#endif
-        perror( "ERROR" );
-        return false;
-
     }
+
+    free( file );
+    return hasReg;
+} */
+
+void parseRegFiles( DIR * dir, struct Word * words ) {
+#ifdef DEBUG_MODE
+    printf( "reading...\n" );
+#endif
+
+    int wordCount = 0, uniqueCount = 0;
+    struct dirent * file;
+    int curr = 1, iter = 1;
+    while ( ( file = readdir( dir ) ) != NULL ) {
+        struct stat info;
+        lstat( file->d_name, &info );
+
+        if ( S_ISREG( info.st_mode ) ) {
+            FILE * f = fopen( file->d_name, "r" );
+            if ( f != NULL ) {
+#ifdef DEBUG_MODE
+                printf( "opening %s...\n", file->d_name );
+#endif
+
+                char temp[80];
+                int i = 0;
+                do {
+                    char c = fgetc( f );
+                    if ( feof( f ) ) {
+                        break;
+                    } else {
+                        if ( c != ' ' ) {
+                            temp[i] = c;
+                            ++i;
+                        } else {
+                            strcat( "\0", temp);
+                            printf( "%s\n", temp );
+                            memset( temp, 0, 80 );
+                        }
+                        // printf( "%c", c );
+                    }
+                } while ( true );
+
+                ( void )fclose( f );
+            }
+        }
+
+        if ( curr % 32 == 0 ) {
+            ++iter;
+            words = realloc( words, ( 32 * iter ) * sizeof( struct Word ) );
+            printf( "Re-allocated parallel arrays to be size %d.\n", (32 * iter) );
+        }
+
+        ++curr;
+    }
+    printf( "All done (successfully read %d words; %d unique words).\n", 
+            wordCount, uniqueCount );
 }
 
-int main( int argc, char * argv[] ) {
-    if ( ( argc == 2 ) || ( argc == 3 ) ) {
+void printAll( struct Word * words ) {
+    printf( "All words (and corresponding counts) are:\n" );
+}
 
+void print( struct Word word ) {
+    printf( "%s -- %d\n", word._word, word._count );
+}
+
+
+/* ------------------------------------------------------------------------- */
+/* ------------------------------------------------------------------------- */
+
+
+int main( int argc, char * argv[] ) {
+    setbuf( stdout, NULL );     /* Prevent stdout buffering. */
+    if ( ( argc == 2 ) || ( argc == 3 ) ) {
 #ifdef DEBUG_MODE
         printf( "started...\n" );
-        fflush( stdout );
 #endif
 
-        char ** files = calloc( 0, sizeof( char* ) );
-        bool hasFiles = findFiles( argv[1], files );
-
-        if ( hasFiles ) {
-            return EXIT_SUCCESS;
-        } else {
-            return EXIT_FAILURE;
-        }
-
-    } else {
-
+        DIR * dir = opendir( argv[1] );
+        if ( dir != NULL ) {
+            // if ( hasRegFiles( dir ) ) {
 #ifdef DEBUG_MODE
-        printf( "failed.\n" );
-        fflush( stdout );
+            printf( "regular files...\n" );
 #endif
 
-        return EXIT_FAILURE;
+            struct Word * words = calloc( 32, sizeof( struct Word ) );
+            printf( "Allocated initial parallel arrays of size 32.\n" );
+            parseRegFiles( dir, words );
+            ( void )closedir( dir );
 
+            // } else {
+            //     fprintf( stderr, "ERROR: directory does not contain regular files.\n" );
+            // }
+        } else {
+            fprintf( stderr, "ERROR: directory does not exist.\n" );
+        }
+    } else {
+        fprintf( stderr, "ERROR: Invalid arguments.\n" );
+        fprintf( stderr, "USAGE: %s <directory> [<word-count>]\n", argv[0] );
+        return EXIT_FAILURE;
     }
 }
 
