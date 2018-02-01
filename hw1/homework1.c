@@ -52,12 +52,6 @@ void printAll( struct Word * words, int count ) {
 /* ------------------------------------------------------------------------- */
 
 int add( char w[80], struct Word * words, int count, int unique ) {
-    if ( ( unique % 32 == 0 ) && ( unique > 0 ) ) {
-        int reallocMem = 32 * ( (int)( unique / 32 ) + 1 );
-        words = ( struct Word * )realloc( words, ( reallocMem * sizeof( struct Word ) ) );
-        printf( "Re-allocated parallel arrays to be size %d.\n", reallocMem );
-    }
-
     bool added = false;
     for ( int i = 0; i < unique; ++i ) {
         struct Word * temp = ( words + ( i * sizeof( struct Word ) ) );
@@ -83,6 +77,12 @@ int add( char w[80], struct Word * words, int count, int unique ) {
     return unique;
 }
 
+void myAlloc(struct Word ** w, int count) {
+    struct Word *temp = realloc(*w, (count+32)*sizeof(struct Word));
+    if (temp) { w=&temp; }
+    printf( "Re-allocated parallel arrays to be size %d.\n", (32+count) );
+}
+
 /* ------------------------------------------------------------------------- */
 
 int parseRegFiles( DIR * dir, struct Word * words ) {
@@ -90,7 +90,7 @@ int parseRegFiles( DIR * dir, struct Word * words ) {
     printf( "reading...\n" );
 #endif
 
-    int count = 0, unique = 0;
+    int count = 0, unique = 0, iter = 1;
     struct dirent * file;
     while ( ( file = readdir( dir ) ) != NULL ) {
         struct stat info;
@@ -114,13 +114,17 @@ int parseRegFiles( DIR * dir, struct Word * words ) {
                         temp[i] = '\0';
                         unique = add( temp, words, count, unique );
                         ++count;
+                        if ( unique % 32 == 0 ) {
+                            ++iter;
+                            myAlloc(&words, unique);
+                        }
                     }
 
                     memset( temp, 0, 80 );
                     i = 0;
                 }
             } while ( !feof( f ) );
-            (void)fclose( f );
+            ( void )fclose( f );
         }
     }
     printf( "All done (successfully read %d words; %d unique words).\n",
@@ -150,10 +154,9 @@ int main( int argc, char * argv[] ) {
                 struct Word * words = calloc( 32, sizeof( struct Word ) );
                 printf( "Allocated initial parallel arrays of size 32.\n" );
                 int uniqueCount = parseRegFiles( dir, words );
-                (void)closedir( dir );
+                ( void )closedir( dir );
 
                 printAll( words, uniqueCount );
-                free( words );
             } else {
                 fprintf( stderr, "ERROR: could not change to directory.\n" );
             }
