@@ -27,6 +27,10 @@ void printWord( Word w ) {
 
 void checkAlloc( Word ** store, int count ) {
     if ( ( count % 32 == 0 ) && ( count > 0 ) ) {
+#ifdef DEBUG_MODE
+        printf( "reallocating...\n" );
+#endif
+
         int newAlloc = count + 32;
         Word * tmp = realloc( *store, ( newAlloc * SIZEOF ) );
         if ( tmp != NULL ) {
@@ -94,7 +98,7 @@ void parseDir( Word ** store, DIR * dir, int * total, int * unique ) {
                         ++( *total );
 
 #ifdef DEBUG_MODE
-                        printf( "%d --> added %s...\n", *total, tmp );
+                        printf( "%d --> added %s...\n", *unique, tmp );
 #endif
                     }
                     i = 0;
