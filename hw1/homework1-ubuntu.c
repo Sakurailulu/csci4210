@@ -31,13 +31,13 @@ void checkAlloc( Word ** store, int count ) {
         printf( "reallocating...\n" );
 #endif
 
-        *store = realloc( *store, ( ( count + 32 ) * SIZEOF ) );
-        /* if ( tmp != NULL ) {
+        Word * tmp = realloc( *store, ( ( count + 32 ) * SIZEOF ) );
+        if ( tmp != NULL ) {
             *store = tmp;
             printf( "Re-allocated parallel arrays to be size %d.\n", ( count + 32 ) );
         } else {
             fprintf( stderr, "ERROR: memory reallocation failed.\n" );
-        } */
+        }
     }
 }
 
@@ -67,7 +67,7 @@ int add( Word ** store, char w[80], int unique ) {
         strcpy( tmp._word, w );
         tmp._count = 1;
 
-        *( *store + ( SIZEOF * unique ) ) = tmp;
+        ( *( *store + ( SIZEOF * unique ) ) ) = tmp;
         ++unique;
     }
     return unique;
