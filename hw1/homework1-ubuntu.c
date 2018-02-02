@@ -31,15 +31,13 @@ void checkAlloc( Word ** store, int count ) {
         printf( "reallocating...\n" );
 #endif
 
-        int newAlloc = count + 32;
-        Word * tmp = realloc( *store, ( newAlloc * SIZEOF ) );
-        if ( tmp != NULL ) {
+        *store = realloc( *store, ( ( count + 32 ) * SIZEOF ) );
+        /* if ( tmp != NULL ) {
             *store = tmp;
-            printf( "Re-allocated parallel arrays to be size %d.\n", newAlloc );
+            printf( "Re-allocated parallel arrays to be size %d.\n", ( count + 32 ) );
         } else {
             fprintf( stderr, "ERROR: memory reallocation failed.\n" );
-        }
-        free( tmp );
+        } */
     }
 }
 
@@ -48,15 +46,23 @@ int add( Word ** store, char w[80], int unique ) {
 
     bool exists = false;
     for ( int i = 0; i < unique; ++i ) {
-        Word * tmp = ( *store + ( SIZEOF * i ) );
-        if ( ( exists = ( strcmp( tmp->_word, w ) == 0 ) ) ) {
-            ++( tmp->_count );
+        Word tmp = *( *store + ( SIZEOF * i ) );
+        // char tmp[80] = ( *( *store + ( SIZEOF * i ) ) )._word;
+        if ( ( exists = ( strcmp( tmp._word, w ) == 0 ) ) ) {
+#ifdef DEBUG_MODE
+            printf( "%s exists...\n", w );
+#endif
+
+            ++( ( *( *store + ( SIZEOF * i ) ) )._count );
             break;
         }
-        // free( tmp );
     }
 
     if ( !exists ) {
+#ifdef DEBUG_MODE
+            printf( "%s doesn't exist...\n", w );
+#endif
+
         Word tmp;
         strcpy( tmp._word, w );
         tmp._count = 1;
@@ -96,10 +102,6 @@ void parseDir( Word ** store, DIR * dir, int * total, int * unique ) {
                         tmp[i] = '\0';
                         *unique = add( store, tmp, *unique );
                         ++( *total );
-
-#ifdef DEBUG_MODE
-                        printf( "%d --> added %s...\n", *unique, tmp );
-#endif
                     }
                     i = 0;
                     memset( tmp, 0, 80 );
@@ -108,6 +110,8 @@ void parseDir( Word ** store, DIR * dir, int * total, int * unique ) {
         }
         (void)fclose( f );
     }
+    printf( "All done (succesfully read %d words, %d unique words).\n",
+        *total, *unique );
 }
 
 /* Prints first and last 'x' Word structs in store.
@@ -125,7 +129,6 @@ void printSome( Word ** store, int num, int count ) {
     for ( int i = ( count - num ); i < count; ++i ) {
         printWord( *( words + ( SIZEOF * i ) ) );
     }
-    // free( words );
 }
 
 /* Prints all Word structs in store.
@@ -137,7 +140,6 @@ void printAll( Word ** store, int count ) {
     for ( int i = 0; i < count; ++i ) {
         printWord( *( words + ( SIZEOF * i ) ) );
     }
-    // free( words );
 }
 
 int main( int argc, char * argv[] ) {
@@ -176,7 +178,7 @@ int main( int argc, char * argv[] ) {
                 } else {
                     char * tmp;
                     int toPrint = strtol( argv[2], &tmp, 10 );
-                    if ( ( toPrint > *unique ) || ( *total < ( 2 * toPrint ) ) ) {
+                    if ( ( toPrint >= *unique ) || ( *total < ( 2 * toPrint ) ) ) {
                         printAll( &store, *unique );
                     } else {
                         printSome( &store, toPrint, *unique );
