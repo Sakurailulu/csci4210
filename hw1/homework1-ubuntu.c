@@ -1,5 +1,6 @@
 #include <ctype.h>
 #include <dirent.h>
+#include <errno.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -41,20 +42,20 @@ void checkAlloc( Word ** store, int count ) {
     }
 }
 
-int add( Word ** store, char w[80], int unique ) {
-    checkAlloc( store, unique );
+int add( Word * store, char w[80], int unique ) {
+    checkAlloc( &store, unique );
 
     bool exists = false;
     for ( int i = 0; i < unique; ++i ) {
-        Word tmp = *( *store + ( SIZEOF * i ) );
-        // char tmp[80] = ( *( *store + ( SIZEOF * i ) ) )._word;
-        if ( ( exists = ( strcmp( tmp._word, w ) == 0 ) ) ) {
+        if ( strlen(store[i]._word) > 0 ){
+        if ( ( exists = ( strcmp( store[i]._word, w ) == 0 ) ) ) {
 #ifdef DEBUG_MODE
             printf( "%s exists...\n", w );
 #endif
 
-            ++( ( *( *store + ( SIZEOF * i ) ) )._count );
+            ++( store[i]._count );
             break;
+        }
         }
     }
 
@@ -67,13 +68,13 @@ int add( Word ** store, char w[80], int unique ) {
         strcpy( tmp._word, w );
         tmp._count = 1;
 
-        ( *( *store + ( SIZEOF * unique ) ) ) = tmp;
+        store[unique] = tmp;
         ++unique;
     }
     return unique;
 }
 
-void parseDir( Word ** store, DIR * dir, int * total, int * unique ) {
+void parseDir( Word * store, DIR * dir, int * total, int * unique ) {
 #ifdef DEBUG_MODE
     printf( "parsing...\n" );
 #endif
@@ -90,10 +91,8 @@ void parseDir( Word ** store, DIR * dir, int * total, int * unique ) {
 #endif
 
             char tmp[80];
-            int i = 0;
-            char c;
-            while ( !feof( f ) ) {
-                c = fgetc( f );
+            int i = 0, c;
+            while ( ( c = fgetc( f ) ) != EOF ) {
                 if ( isalnum( c ) ) {
                     tmp[i] = c;
                     ++i;
@@ -118,27 +117,25 @@ void parseDir( Word ** store, DIR * dir, int * total, int * unique ) {
  * @param   num, the number of words to print from start and end.
  *          count, count of all unique words.
  */
-void printSome( Word ** store, int num, int count ) {
-    Word * words = *store;
+void printSome( Word * store, int num, int count ) {
     printf( "First %d words (and corresponding counts) are:\n", num );
     for ( int i = 0; i < num; ++i ) {
-        printWord( *( words + ( SIZEOF * i ) ) );
+        printWord( store[i] );
     }
 
     printf( "Last %d words (and corresponding counts) are:\n", num );
     for ( int i = ( count - num ); i < count; ++i ) {
-        printWord( *( words + ( SIZEOF * i ) ) );
+        printWord( store[i] );
     }
 }
 
 /* Prints all Word structs in store.
  * @param   count, count of all unique words.
  */
-void printAll( Word ** store, int count ) {
-    Word * words = *store;
+void printAll( Word * store, int count ) {
     printf( "All words (and corresponding counts) are:\n" );
     for ( int i = 0; i < count; ++i ) {
-        printWord( *( words + ( SIZEOF * i ) ) );
+        printWord( store[i] );
     }
 }
 
@@ -169,19 +166,19 @@ int main( int argc, char * argv[] ) {
                 *unique = 0;
 
                 /* Parsing. */
-                parseDir( &store, dir, total, unique );
+                parseDir( store, dir, total, unique );
                 (void)closedir( dir );
 
                 /* Printing conditionals to provide correct output. */
                 if ( argc == 2 ) {
-                    printAll( &store, *unique );
+                    printAll( store, *unique );
                 } else {
                     char * tmp;
                     int toPrint = strtol( argv[2], &tmp, 10 );
                     if ( ( toPrint >= *unique ) || ( *total < ( 2 * toPrint ) ) ) {
-                        printAll( &store, *unique );
+                        printAll( store, *unique );
                     } else {
-                        printSome( &store, toPrint, *unique );
+                        printSome( store, toPrint, *unique );
                     }
                 }
 
