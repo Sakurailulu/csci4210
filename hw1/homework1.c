@@ -79,36 +79,6 @@ void printAll( int size ) {
 /* -------------------------------------------------------------------------- */
 /* Struct array modifiers. */
 
-/* Adds new Word struct to STORE.
- * @param       str, char array with word to add.
- *              size, count of all unique words.
- * @return      int with new count of unique
- *              ( same a passed if word already exists, otherwise incremented by 1 )
- * @modifies    STORE
- * @effects     adds new Word struct of modifies existing when necessary.
- */
-int add( char str[80], int size ) {
-    bool exists = false;
-    for ( int i = 0; i < size; ++i ) {
-        if ( ( exists = ( strcmp( ( STORE[i]._word ), str ) == 0 ) ) ) {
-            ++( ( STORE[i] )._count );
-            break;
-        }
-    }
-
-    if ( !exists ) {
-        Word temp;
-        strcpy( temp._word, str );
-        temp._count = 1;
-
-        STORE[size] = temp;
-        ++size;
-    }
-
-    return size;
-}
-
-
 /* Reallocation method.
  * @param       w, struct array to allocate.
  *              size, count of all unique words.
@@ -134,6 +104,35 @@ Word * checkAlloc( Word * w, int size ) {
 }
 
 
+/* Adds new Word struct to STORE.
+ * @param       str, char array with word to add.
+ *              size, count of all unique words.
+ * @return      int with new count of unique
+ *              ( same a passed if word already exists, otherwise incremented by 1 )
+ * @modifies    STORE
+ * @effects     adds new Word struct of modifies existing when necessary.
+ */
+int add( char str[80], int size ) {
+    bool exists = false;
+    for ( int i = 0; i < size; ++i ) {
+        if ( ( exists = ( strcmp( ( STORE[i]._word ), str ) == 0 ) ) ) {
+            ++( ( STORE[i] )._count );
+            break;
+        }
+    }
+
+    if ( !exists ) {
+        STORE = checkAlloc( STORE, size );
+        strcpy( ( STORE[size] )._word, str );
+        ( STORE[size] )._count = 1;
+
+        ++size;
+    }
+
+    return size;
+}
+
+
 /* -------------------------------------------------------------------------- */
 /* File parsing. */
 
@@ -156,27 +155,25 @@ void parseFiles( DIR * dir, int * total, int * unique ) {
             printf( "working...\n" );
 #endif
 
-            char temp[80];
-            int i = 0;
-            while ( !feof( f ) ) {
-                int c = fgetc( f );
+            char tmp[80];
+            int i = 0, c = 0;
+            while ( ( c = fgetc( f ) ) != EOF ) {
                 if ( isalnum( c ) ) {
-                    temp[i] = c;
+                    tmp[i] = c;
                     ++i;
                 } else {
-                    if ( ( isalnum( temp[0] ) ) && ( isalnum( temp[1] ) ) ) {
-                        temp[i] = '\0';
-                        STORE = checkAlloc( STORE, *unique );
-                        *unique = add( temp, *unique );
+                    if ( ( isalnum( tmp[0] ) ) && ( isalnum( tmp[1] ) ) ) {
+                        tmp[i] = '\0';
+                        *unique = add( tmp, *unique );
                         ++( *total );
 
 #ifdef DEBUG_MODE
-                        printf( "str = %s, count = %d\n", temp, *unique );
+                        printf( "str = %s, count = %d\n", tmp, *unique );
 #endif
 
                     }
                     i = 0;
-                    memset( temp, 0, 80 );
+                    memset( tmp, 0, 80 );
                 }
             }
         }
