@@ -26,71 +26,125 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-struct Word {
+typedef struct {
     char _word[80];
     int _count;
-};
+} Word;
+
+const int SCALE = 32;               /* Starting size and incrementing factor for STORE. */
+const int SIZEOF = sizeof( Word );  /* Size of struct Word to save function calls. */
+Word * STORE;                       /* Word struct array for storage. */
 
 
-/* ------------------------------------------------------------------------- */
-/* ------------------------------------------------------------------------- */
+/* -------------------------------------------------------------------------- */
+/* Printing functions. */
 
-
-void print( struct Word word ) {
+/* Prints Word struct using desired output formatting.
+ * @param       word, Word struct to be printed in the format
+ *                      "word._word -- word._count"
+ */
+void printWord( Word word ) {
     printf( "%s -- %d\n", word._word, word._count );
 }
 
-/* ------------------------------------------------------------------------- */
 
-void printAll( struct Word * words, int count ) {
-    printf( "All words (and corresponding counts) are:\n" );
-    for ( int i = 0; i < count; ++i ) {
-        print( *( words + ( i * sizeof( struct Word ) ) ) );
+/* Prints passed number of first and last words.
+ * @param       num, number of first and last to print.
+ *              count, count of all unique words.
+ */
+void printSome( int num, int size ) {
+    printf( "First %d words (and corresponding counts) are:\n", num );
+    for ( int i = 0; i < num; ++i ) {
+        printWord( STORE[i] );
+    }
+
+    printf( "Last %d words (and corresponding counts) are:\n", num );
+    for ( int i = ( size - num ); i < size; ++i ) {
+        printWord( STORE[i] );
     }
 }
 
-/* ------------------------------------------------------------------------- */
 
-int add( char w[80], struct Word * words, int count, int unique ) {
-    bool added = false;
-    for ( int i = 0; i < unique; ++i ) {
-        struct Word * temp = ( words + ( i * sizeof( struct Word ) ) );
-#ifdef DEBUG_MODE
-        printf( "%s ==> %s\n", temp->_word, w );
-#endif
-        if ( strcmp( temp->_word, w ) == 0 ) {
-            ++temp->_count;
-            *( words + ( i * sizeof( struct Word ) ) ) = *temp;
-            added = true;
+/* Prints all Word structs in STORE.
+ * @param       size, count of all unique words.
+ */
+void printAll( int size ) {
+    printf( "All words (and corresponding counts) are:\n" );
+    for ( int i = 0; i < size; ++i ) {
+        printWord( STORE[i] );
+    }
+}
+
+
+/* -------------------------------------------------------------------------- */
+/* Struct array modifiers. */
+
+/* Adds new Word struct to STORE.
+ * @param       str, char array with word to add.
+ *              size, count of all unique words.
+ * @return      int with new count of unique
+ *              ( same a passed if word already exists, otherwise incremented by 1 )
+ * @modifies    STORE
+ * @effects     adds new Word struct of modifies existing when necessary.
+ */
+int add( char str[80], int size ) {
+    bool exists = false;
+    for ( int i = 0; i < size; ++i ) {
+        if ( ( exists = ( strcmp( ( STORE[i]._word ), str ) == 0 ) ) ) {
+            ++( ( STORE[i] )._count );
             break;
         }
     }
 
-    if ( !added ) {
-        struct Word temp;
-        strcpy( temp._word, w );
+    if ( !exists ) {
+        Word temp;
+        strcpy( temp._word, str );
         temp._count = 1;
-        *( words + ( count * sizeof( struct Word ) ) ) = temp;
-        ++unique;
+
+        STORE[size] = temp;
+        ++size;
     }
 
-    return unique;
+    return size;
 }
 
-void myAlloc(struct Word ** w, int count) {
-    struct Word *temp = realloc(*w, (count+32)*sizeof(struct Word));
-    if (temp) { w=&temp; }
-    printf( "Re-allocated parallel arrays to be size %d.\n", (32+count) );
+
+/* Reallocation method.
+ * @param       w, struct array to allocate.
+ *              size, count of all unique words.
+ * @return      Word struct array equal to original or post-reallocation.
+ */
+Word * checkAlloc( Word * w, int size ) {
+    if ( ( size % 32 == 0 ) && ( size > 0 ) ) {
+        int newAlloc = size + 32;
+        Word * tmp = realloc( w, ( newAlloc * SIZEOF ) );
+        if ( tmp == NULL ) {
+            fprintf( stderr, "ERROR: Memory reallocation failed." );
+        } else {
+            for ( int i = size; i < newAlloc; ++i ) {
+                memset( ( tmp[i] )._word, 0, 80 );
+                ( tmp[i] )._count = 0;
+            }
+            printf( "Re-allocated parallel arrays to be size %d.\n", newAlloc );
+        }
+        return tmp;
+    } else {
+        return STORE;
+    }
 }
 
-/* ------------------------------------------------------------------------- */
 
-int parseRegFiles( DIR * dir, struct Word * words ) {
-#ifdef DEBUG_MODE
-    printf( "reading...\n" );
-#endif
+/* -------------------------------------------------------------------------- */
+/* File parsing. */
 
-    int count = 0, unique = 0, iter = 1;
+/* Parses all files in directory.
+ * @param       dir, opened DIR * using directory from command line input.
+ *              total, pointer to int with count of all words read.
+ *              unique, pointer to int with count of all unique words.
+ * @modifies    STORE
+ * @effects     adds and modifies Word structs when necessary.
+ */
+void parseFiles( DIR * dir, int * total, int * unique ) {
     struct dirent * file;
     while ( ( file = readdir( dir ) ) != NULL ) {
         struct stat info;
@@ -99,47 +153,47 @@ int parseRegFiles( DIR * dir, struct Word * words ) {
         FILE * f = fopen( file->d_name, "r" );
         if ( S_ISREG( info.st_mode ) && ( f != NULL ) ) {
 #ifdef DEBUG_MODE
-            printf( "opening %s...\n", file->d_name );
+            printf( "working...\n" );
 #endif
 
             char temp[80];
             int i = 0;
-            do {
-                char c = fgetc( f );
+            while ( !feof( f ) ) {
+                int c = fgetc( f );
                 if ( isalnum( c ) ) {
                     temp[i] = c;
                     ++i;
                 } else {
-                    if ( isalnum( temp[1] ) ) {
+                    if ( ( isalnum( temp[0] ) ) && ( isalnum( temp[1] ) ) ) {
                         temp[i] = '\0';
-                        unique = add( temp, words, count, unique );
-                        ++count;
-                        if ( unique % 32 == 0 ) {
-                            ++iter;
-                            myAlloc(&words, unique);
-                        }
-                    }
+                        STORE = checkAlloc( STORE, *unique );
+                        *unique = add( temp, *unique );
+                        ++( *total );
 
-                    memset( temp, 0, 80 );
+#ifdef DEBUG_MODE
+                        printf( "str = %s, count = %d\n", temp, *unique );
+#endif
+
+                    }
                     i = 0;
+                    memset( temp, 0, 80 );
                 }
-            } while ( !feof( f ) );
-            ( void )fclose( f );
+            }
         }
+        (void)fclose( f );
     }
     printf( "All done (successfully read %d words; %d unique words).\n",
-            count, unique );
-    return unique;
+            *total, *unique );
 }
 
 
 /* ------------------------------------------------------------------------- */
-/* ------------------------------------------------------------------------- */
-
+/* Main */
 
 int main( int argc, char * argv[] ) {
-    setbuf( stdout, NULL );     /* Prevent stdout buffering. */
     if ( ( argc == 2 ) || ( argc == 3 ) ) {
+        setbuf( stdout, NULL );     /* Prevent stdout buffering. */
+
 #ifdef DEBUG_MODE
         printf( "started...\n" );
 #endif
@@ -148,24 +202,62 @@ int main( int argc, char * argv[] ) {
         if ( dir != NULL ) {
             if ( chdir( argv[1] ) == 0 ) {
 #ifdef DEBUG_MODE
-                printf( "regular files...\n" );
+                printf( "good directory, continuing...\n" );
 #endif
 
-                struct Word * words = calloc( 32, sizeof( struct Word ) );
+                /* Initial memory allocation. */
+                // STORE = malloc( SIZEOF * SCALE );
+                STORE = calloc( SCALE, SIZEOF );
                 printf( "Allocated initial parallel arrays of size 32.\n" );
-                int uniqueCount = parseRegFiles( dir, words );
-                ( void )closedir( dir );
 
-                printAll( words, uniqueCount );
+                int * total = malloc( sizeof( int ) ),
+                    * unique = malloc( sizeof( int ) );
+                *total = 0;
+                *unique = 0;
+
+                /* Parsing. */
+                parseFiles( dir, total, unique );
+                (void)closedir( dir );
+
+#ifdef DEBUG_MODE
+                printf( "----------------\n3 > %s   10 > %s\n----------------\n",
+                    ( *( STORE + ( 3 * SIZEOF ) ) )._word,
+                    ( *( STORE + ( 10 * SIZEOF ) ) )._word );
+#endif
+
+                    /* Printing conditionals to provide correct output. */
+                if ( argc == 2 ) {
+                    printAll( *unique );
+                } else {
+                    char * tmp;
+                    int toPrint = strtol( argv[2], &tmp, 10 );
+                    if ( ( toPrint >= *unique ) || ( *total < ( 2 * toPrint ) ) ) {
+                        printAll( *unique );
+                    } else {
+                        printSome( toPrint, *unique );
+                    }
+                }
+
+
+                /* Free memory and return. */
+                free( unique );     unique = NULL;
+                free( total );      total = NULL;
+                free( STORE );      STORE = NULL;
+                return EXIT_SUCCESS;
             } else {
                 fprintf( stderr, "ERROR: could not change to directory.\n" );
+                return EXIT_FAILURE;
             }
         } else {
             fprintf( stderr, "ERROR: directory does not exist.\n" );
+            return EXIT_FAILURE;
         }
     } else {
         fprintf( stderr, "ERROR: Invalid arguments.\n" );
         fprintf( stderr, "USAGE: %s <directory> [<word-count>]\n", argv[0] );
         return EXIT_FAILURE;
     }
+
+    /* We should never be able to ge here... */
+    return EXIT_FAILURE;
 }
