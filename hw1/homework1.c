@@ -13,7 +13,7 @@
  *
  * The first call parses through the directory and gives all unique
  * words with a count of ocurrences, whereas the second call only gives
- * the first and last *number* unique words with a count of ocurrences.
+ * the first and last *word-count* unique words with a count of ocurrences.
  */
 
 #include <ctype.h>
