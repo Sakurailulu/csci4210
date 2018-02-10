@@ -11,6 +11,7 @@
  * Where *m* and *n* are the respective grid lengths.
  */
 
+#include <assert.h>
 #include <ctype.h>
 #include <errno.h>
 #include <stdio.h>
@@ -21,6 +22,36 @@ typedef struct {
     
 } Tour;
 
+typedef struct {
+    int _x;
+    int _y;
+    char ** _grid;
+} Board;
+
+
+/* ------------------------------------------------------------------------- */
+
+int initBoard( Board * b, int x, int y ) {
+    assert( ( x > 2 ) && ( y > 2 ) );
+    
+    Board loc = *b;
+    loc._grid = calloc( x, sizeof( char* ) );
+    if ( loc._grid == NULL ) {
+        perror( "ERROR" );
+        return EXIT_FAILURE;
+    } else {
+        for ( int i = 0; i < x; ++i ) {
+            loc._grid[i] = calloc( y, sizeof( char ) );
+            if ( loc._grid[i] == NULL ) {
+                perror( "ERROR" );
+                return EXIT_FAILURE;
+            }
+        }
+    }
+
+    b = &loc;
+    return EXIT_SUCCESS;
+}
 
 /* ------------------------------------------------------------------------- */
 
