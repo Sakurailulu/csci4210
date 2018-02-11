@@ -16,6 +16,7 @@
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 
 typedef struct {
@@ -31,27 +32,60 @@ typedef struct {
 
 /* ------------------------------------------------------------------------- */
 
-int initBoard( Board * b, int x, int y ) {
+/* Board initialization method.
+ * @param   x, width of board grid.
+ *          y, height of board grid.
+ * @return  new Board struct if no allocation fails, NULL otherwise.
+ */
+Board initBoard( int x, int y ) {
     assert( ( x > 2 ) && ( y > 2 ) );
     
-    Board loc = *b;
-    loc._grid = calloc( x, sizeof( char* ) );
-    if ( loc._grid == NULL ) {
+    Board b;
+    b._x = x;
+    b._y = y;
+    b._grid = calloc( b._y, sizeof( char* ) );
+    
+    if ( b._grid == NULL ) {
         perror( "ERROR" );
-        return EXIT_FAILURE;
+        return b;
     } else {
-        for ( int i = 0; i < x; ++i ) {
-            loc._grid[i] = calloc( y, sizeof( char ) );
-            if ( loc._grid[i] == NULL ) {
+        for ( int i = 0; i < b._y; ++i ) {
+            b._grid[i] = calloc( b._x, sizeof( char ) );
+            if ( b._grid[i] == NULL ) {
                 perror( "ERROR" );
-                return EXIT_FAILURE;
+                return b;
             }
         }
     }
 
-    b = &loc;
-    return EXIT_SUCCESS;
+    for ( int i = 0; i < b._y; ++i ) {
+        for ( int j = 0; j < b._x; ++j ) {
+            b._grid[i][j] = '.';
+        }
+    }
+    b._grid[0][0] = 'k';
+
+    return b;
 }
+
+
+/* Board printing method ( specifically used with DISPLAY_BOARD ).
+ * @param   b, Board struct to print.
+ */
+void printBoard( Board b ) {
+    char * tmp = calloc( b._x, sizeof( char ) );
+    for ( int i = 0; i < b._y; ++i ) {
+        printf( "%s\n", tmp[i] );
+    }
+    for ( int i = 0; i < b._x; ++i ) {
+        for ( int j = 0; j < b._y; ++j ) {
+            tmp[j] = b._grid[i][j];
+        }
+        printf( "%s\n", tmp );
+        memset( tmp, 0, b._x );
+    }
+}
+
 
 /* ------------------------------------------------------------------------- */
 
@@ -68,7 +102,8 @@ int main( int argc, char * argv[] ) {
             printf( "\tvalid args... continuing...\n" );
 #endif
 
-            /* hopefully */
+            Board touring = initBoard( m, n );
+            printBoard( touring );
             return EXIT_SUCCESS;
         } else {
             /* ( m <= 2 ) && ( n <= 3 ) */
