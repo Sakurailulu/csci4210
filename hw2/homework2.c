@@ -92,6 +92,7 @@ void freeBoard( Board * b ) {
 /* ------------------------------------------------------------------------- */
 
 int main( int argc, char * argv[] ) {
+    setbuf( stdout, NULL );         /* Prevent buffering in stdout. */
     if ( argc == 3 ) {
 #ifdef DEBUG_MODE
         printf( "started...\n" );
@@ -104,13 +105,30 @@ int main( int argc, char * argv[] ) {
             printf( "\tvalid args... continuing...\n" );
 #endif
 
-            Board * touring = initBoard( n, m );
-            pid_t pid = getpid();
-            printf( "PID %d: Solving the knight's tour problem for a %dx%d board\n",
-                        pid, m, n );
+            /* Initializing Board struct to be used throughout. */
+            Board touring;
+            touring._x = m;         touring._y = n;
+            touring._grid = calloc( touring._y, sizeof( char* ) );
+            if ( touring._grid == NULL ) {
+                fprintf( stderr, "ERROR: calloc() failed." );
+            }
+            for ( int i = 0; i < touring._y; ++i ) {
+                touring._grid[i] = calloc( touring._x, sizeof( char ) );
+            }
 
-            printBoard( pid, touring );
-            freeBoard( touring );
+            /* Board * touring = initBoard( n, m );
+            pid_t pid = getpid();
+            printf( "PID %d: Solving the knight's tour problem for a %dx%d
+                        board\n", pid, m, n );
+
+            printBoard( pid, touring ); */
+
+            /* Freeing allocated memory in board. */
+            for ( int i = 0; i < touring._y; ++i ) {
+                free( touring._grid[i] );
+            }
+            free( touring._grid );
+
             return EXIT_SUCCESS;
         } else {
             /* ( m <= 2 ) && ( n <= 3 ) */
