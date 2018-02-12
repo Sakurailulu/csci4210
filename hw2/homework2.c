@@ -1,9 +1,9 @@
 /* homework2.c
  * Griffin Melnick, melnig@rpi.edu
  *
- * Emulating a solution finding algorithm to the knight's tour problem, we 
- * take a grid of m x n squares and iterate through children processes to 
- * determine the maximum number of moves possible. This is called by the 
+ * Emulating a solution finding algorithm to the knight's tour problem, we
+ * take a grid of m x n squares and iterate through children processes to
+ * determine the maximum number of moves possible. This is called by the
  * command:
  *
  *   bash$ ./a.out <m> <n>
@@ -20,10 +20,6 @@
 #include <unistd.h>
 
 typedef struct {
-    
-} Tour;
-
-typedef struct {
     int _x;
     int _y;
     char ** _grid;
@@ -33,18 +29,18 @@ typedef struct {
 /* ------------------------------------------------------------------------- */
 
 /* Board initialization method.
- * @param   x, width of board grid.
- *          y, height of board grid.
- * @return  new Board struct if no allocation fails, NULL otherwise.
+ * @param       x, width of board grid.
+ *              y, height of board grid.
+ * @return      new Board struct if no allocation fails, NULL otherwise.
  */
 Board initBoard( int x, int y ) {
     assert( ( x > 2 ) && ( y > 2 ) );
-    
+
     Board b;
     b._x = x;
     b._y = y;
     b._grid = calloc( b._y, sizeof( char* ) );
-    
+
     if ( b._grid == NULL ) {
         perror( "ERROR" );
         return b;
@@ -70,20 +66,23 @@ Board initBoard( int x, int y ) {
 
 
 /* Board printing method ( specifically used with DISPLAY_BOARD ).
- * @param   b, Board struct to print.
+ * @param       b, Board struct to print.
  */
-void printBoard( Board b ) {
-    char * tmp = calloc( b._x, sizeof( char ) );
+void printBoard( pid_t pid, Board b ) {
     for ( int i = 0; i < b._y; ++i ) {
-        printf( "%s\n", tmp[i] );
+        printf( "PID %d:   %s\n", pid, b._grid[i] );
     }
-    for ( int i = 0; i < b._x; ++i ) {
-        for ( int j = 0; j < b._y; ++j ) {
-            tmp[j] = b._grid[i][j];
-        }
-        printf( "%s\n", tmp );
-        memset( tmp, 0, b._x );
-    }
+}
+
+/* Board freeing method ( calls free() on _grid )
+ * @param       b, Board struct to free.
+ * @modifies    b
+ * @effects     frees b._grid
+ */
+void freeBoard( Board * b ) {
+    Board tmp = *b;
+    free( tmp._grid );
+    b = &tmp;
 }
 
 
@@ -102,8 +101,13 @@ int main( int argc, char * argv[] ) {
             printf( "\tvalid args... continuing...\n" );
 #endif
 
-            Board touring = initBoard( m, n );
-            printBoard( touring );
+            Board touring = initBoard( n, m );
+            pid_t pid = getpid();
+            printf( "PID %d: Solving the knight's tour problem for a %dx%d board\n",
+                        pid, m, n );
+
+            printBoard( pid, touring );
+            freeBoard( &touring );
             return EXIT_SUCCESS;
         } else {
             /* ( m <= 2 ) && ( n <= 3 ) */
