@@ -33,7 +33,7 @@ typedef struct {
  *              y, height of board grid.
  * @return      new Board struct if no allocation fails, NULL otherwise.
  */
-Board initBoard( int x, int y ) {
+Board * initBoard( int x, int y ) {
     assert( ( x > 2 ) && ( y > 2 ) );
 
     Board b;
@@ -61,16 +61,16 @@ Board initBoard( int x, int y ) {
     }
     b._grid[0][0] = 'k';
 
-    return b;
+    return &b;
 }
 
 
 /* Board printing method ( specifically used with DISPLAY_BOARD ).
  * @param       b, Board struct to print.
  */
-void printBoard( pid_t pid, Board b ) {
-    for ( int i = 0; i < b._y; ++i ) {
-        printf( "PID %d:   %s\n", pid, b._grid[i] );
+void printBoard( pid_t pid, Board * b ) {
+    for ( int i = 0; i < (*b)._y; ++i ) {
+        printf( "PID %d:   %s\n", pid, (*b)._grid[i] );
     }
 }
 
@@ -80,9 +80,12 @@ void printBoard( pid_t pid, Board b ) {
  * @effects     frees b._grid
  */
 void freeBoard( Board * b ) {
-    Board tmp = *b;
-    free( tmp._grid );
-    b = &tmp;
+    // Board tmp = *b;
+    for ( int i = 0; i < (*b)._y; ++i ) {
+        free( (*b)._grid[i] );
+    }
+    free( (*b)._grid );
+    // b = &tmp;
 }
 
 
@@ -101,13 +104,13 @@ int main( int argc, char * argv[] ) {
             printf( "\tvalid args... continuing...\n" );
 #endif
 
-            Board touring = initBoard( n, m );
+            Board * touring = initBoard( n, m );
             pid_t pid = getpid();
             printf( "PID %d: Solving the knight's tour problem for a %dx%d board\n",
                         pid, m, n );
 
             printBoard( pid, touring );
-            freeBoard( &touring );
+            freeBoard( touring );
             return EXIT_SUCCESS;
         } else {
             /* ( m <= 2 ) && ( n <= 3 ) */
