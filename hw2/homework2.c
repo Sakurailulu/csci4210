@@ -16,9 +16,7 @@
  *   -- NO_PARALLEL, attempts to prevent interleaving by forcing waits.
  */
 
-#include <assert.h>
 #include <ctype.h>
-#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
