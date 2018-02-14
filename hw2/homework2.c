@@ -9,6 +9,11 @@
  *   bash$ ./a.out <m> <n>
  *
  * Where *m* and *n* are the respective grid lengths.
+ *
+ * Compilable with the following -D flags:
+ *   -- DEBUG_MODE, provides debug output.
+ *   -- DISPLAY_BOARD, provides output of current board.
+ *   -- NO_PARALLEL, attempts to prevent interleaving by forcing waits.
  */
 
 #include <assert.h>
