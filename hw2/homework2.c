@@ -77,30 +77,37 @@ int main( int argc, char * argv[] ) {
             touring._grid = calloc( touring._y, sizeof( char* ) );
             if ( touring._grid == NULL ) {
                 fprintf( stderr, "ERROR: calloc() failed." );
-            }
-            for ( int i = 0; i < touring._y; ++i ) {
-                touring._grid[i] = calloc( touring._x, sizeof( char ) );
+                return EXIT_FAILURE;
+            } else {
+                for ( int i = 0; i < touring._y; ++i ) {
+                    touring._grid[i] = calloc( touring._x, sizeof( char ) );
+                }
+
+                if ( touring._grid[i] == NULL ) {
+                    fprintf( stderr, "ERROR: calloc() failed." );
+                    return EXIT_FAILURE;
+                }
             }
 
             /* Touring simulation. */
             pid_t pid = getpid();
             printf( "PID %d: Solving the knight's tour problem for a %dx%d board\n", pid, m, n );
 
-            int failed = tour( &touring );
-            if ( !failed ) {
-                return EXIT_SUCCESS;
-            } else {
-                fprintf( stderr, "ERROR: Tour failed.\n" );
-                return EXIT_FAILURE;
-            }
-
             /* Freeing allocated memory in board. */
             for ( int i = 0; i < touring._y; ++i ) {
                 free( touring._grid[i] );
             }
             free( touring._grid );
-
             return EXIT_SUCCESS;
+
+            /* Check for failure while touring. */
+            /* int failed = tour( &touring ); 
+            if ( !failed ) {
+                return EXIT_SUCCESS;
+            } else {
+                fprintf( stderr, "ERROR: Tour failed.\n" );
+                return EXIT_FAILURE;
+            } */
         } else {
             /* ( m <= 2 ) && ( n <= 3 ) */
             fprintf( stderr, "ERROR: Invalid argument(s)\n" );
