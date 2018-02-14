@@ -22,11 +22,27 @@
 #include <string.h>
 #include <unistd.h>
 
+/* Helper structs. */
+/** Provides representation of coordinate pair to help with positioning. */
 typedef struct {
     int _x;
     int _y;
+} Pair;
+
+
+/** Provides representation of board on which to perform the knight's tour. */
+typedef struct {
+    int _x;
+    int _y;
+    int _moves;
+    Pair _curr;
     char ** _grid;
 } Board;
+
+
+void printBoard( pid_t pid, Board b );
+int findPossMoves( Board b );
+int tour( Board * b );
 
 
 /* ------------------------------------------------------------------------- */
@@ -34,20 +50,42 @@ typedef struct {
 /* Board printing method ( specifically used with DISPLAY_BOARD ).
  * @param       b, Board struct to print.
  */
-void printBoard( pid_t pid, Board * b ) {
-    for ( int i = 0; i < (*b)._y; ++i ) {
-        printf( "PID %d:   %s\n", pid, (*b)._grid[i] );
+void printBoard( pid_t pid, Board b ) {
+    for ( int i = 0; i < b._y; ++i ) {
+        printf( "PID %d:   %s\n", pid, b._grid[i] );
     }
 }
 
 
+/* Finds count of possible moves from current position.
+ * @param       b, Board struct to search.
+ * @return      count of possible moves found.
+ */
+int findPossMoves( Board b ) {
+    return 2;
+}
+
+
 /* Touring simulation.
- * @param b, Board struct pointer.
+ * @param       b, Board struct pointer.
+ * @return      EXIT_SUCCESS or EXIT_FAILURE depending on children processes.
+ * @modifies    b
+ * @effects     marks spots visited by changing from '.' to 'k'.
  */
 int tour( Board * b ) {
     Board tmp = *b;
+
+    int poss = findPossMoves( tmp );
+    if ( poss > 1 ) {
+        printf( "PID %d: Multiple moves possible after move #%d\n", 
+                    getpid(), tmp._moves );
+        /* fork */
+    } else {
+        /* handle return / child exit */
+    }
+
 #ifdef DISPLAY_BOARD
-    printBoard( getpid(), &tmp );
+    printBoard( getpid(), tmp );
 #endif
 
     b = &tmp;
@@ -72,8 +110,9 @@ int main( int argc, char * argv[] ) {
 #endif
 
             /* Initializing Board struct to be used throughout. */
+            /** Memory allocation. */
             Board touring;
-            touring._x = m;         touring._y = n;
+            touring._x = m;                 touring._y = n;
             touring._grid = calloc( touring._y, sizeof( char* ) );
             if ( touring._grid == NULL ) {
                 fprintf( stderr, "ERROR: calloc() failed." );
@@ -81,23 +120,34 @@ int main( int argc, char * argv[] ) {
             } else {
                 for ( int i = 0; i < touring._y; ++i ) {
                     touring._grid[i] = calloc( touring._x, sizeof( char ) );
-                }
-
-                if ( touring._grid[i] == NULL ) {
-                    fprintf( stderr, "ERROR: calloc() failed." );
-                    return EXIT_FAILURE;
+                    if ( touring._grid[i] == NULL ) {
+                        fprintf( stderr, "ERROR: calloc() failed." );
+                        return EXIT_FAILURE;
+                    }
                 }
             }
+
+            /** Fill grid with marker values. */
+            for ( int i = 0; i < touring._y; ++i ) {
+                for ( int j = 0; j < touring._x; ++j ) {
+                    touring._grid[i][j] = '.';
+                }
+            }
+            touring._grid[0][0] = 'k';      touring._moves = 1;
+            touring._curr = (Pair){ ._x = 0, ._y = 0 };
 
             /* Touring simulation. */
             pid_t pid = getpid();
-            printf( "PID %d: Solving the knight's tour problem for a %dx%d board\n", pid, m, n );
+            printf( "PID %d: Solving the knight's tour problem for a %dx%d board\n", 
+                        pid, m, n );
+
+            tour( &touring );
 
             /* Freeing allocated memory in board. */
             for ( int i = 0; i < touring._y; ++i ) {
-                free( touring._grid[i] );
+                free( touring._grid[i] );   touring._grid[i] = NULL;
             }
-            free( touring._grid );
+            free( touring._grid );          touring._grid = NULL;
             return EXIT_SUCCESS;
 
             /* Check for failure while touring. */
