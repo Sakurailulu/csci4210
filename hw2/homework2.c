@@ -32,8 +32,8 @@ typedef struct {
 
 /** Provides representation of board on which to perform the knight's tour. */
 typedef struct {
-    int _x;
-    int _y;
+    int _rows;
+    int _cols;
     int _moves;
     Pair _curr;
     char ** _grid;
@@ -116,14 +116,14 @@ int main( int argc, char * argv[] ) {
 #endif
 
             Board touring;
-            touring._x = m;                 touring._y = n;
-            touring._grid = calloc( touring._y, sizeof( char* ) );
+            touring._rows = m;                 touring._cols = n;
+            touring._grid = calloc( touring._cols, sizeof( char* ) );
             if ( touring._grid == NULL ) {
                 fprintf( stderr, "ERROR: calloc() failed." );
                 return EXIT_FAILURE;
             } else {
-                for ( int i = 0; i < touring._y; ++i ) {
-                    touring._grid[i] = calloc( touring._x, sizeof( char ) );
+                for ( int i = 0; i < touring._cols; ++i ) {
+                    touring._grid[i] = calloc( touring._rows, sizeof( char ) );
                     if ( touring._grid[i] == NULL ) {
                         fprintf( stderr, "ERROR: calloc() failed." );
                         return EXIT_FAILURE;
@@ -132,8 +132,8 @@ int main( int argc, char * argv[] ) {
             }
 
             /** Fill grid with marker values. */
-            for ( int i = 0; i < touring._y; ++i ) {
-                for ( int j = 0; j < touring._x; ++j ) {
+            for ( int i = 0; i < touring._cols; ++i ) {
+                for ( int j = 0; j < touring._rows; ++j ) {
                     touring._grid[i][j] = '.';
                 }
             }
@@ -142,8 +142,8 @@ int main( int argc, char * argv[] ) {
 
 #ifdef DEBUG_MODE
             printf( "        Board details:\n" );
-            printf( "        _x = %d, _y = %d, _moves = %d\n", touring._x,
-                        touring._y, touring._moves );
+            printf( "        _x = %d, _y = %d, _moves = %d\n", touring._rows,
+                        touring._cols, touring._moves );
             printf( "        _curr = (%d, %d)\n", touring._curr._x,
                         touring._curr._y );
 #endif
@@ -155,7 +155,7 @@ int main( int argc, char * argv[] ) {
 
             pid_t pid = getpid();
             printf( "PID %d: Solving the knight's tour problem for a %dx%d board\n",
-                        pid, m, n );
+                        pid, touring._rows, touring._cols );
 
             tour( &touring );
 
@@ -164,7 +164,7 @@ int main( int argc, char * argv[] ) {
             printf( "    freeing memory...\n" );
 #endif
 
-            for ( int i = 0; i < touring._y; ++i ) {
+            for ( int i = 0; i < touring._cols; ++i ) {
                 free( touring._grid[i] );   touring._grid[i] = NULL;
             }
             free( touring._grid );          touring._grid = NULL;
