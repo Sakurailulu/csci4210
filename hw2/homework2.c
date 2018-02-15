@@ -51,7 +51,7 @@ int tour( Board * b );
  * @param       b, Board struct to print.
  */
 void printBoard( pid_t pid, Board b ) {
-    for ( int i = 0; i < b._y; ++i ) {
+    for ( int i = 0; i < b._cols; ++i ) {
         printf( "PID %d:   %s\n", pid, b._grid[i] );
     }
 }
@@ -79,14 +79,15 @@ int tour( Board * b ) {
     if ( poss > 1 ) {
         printf( "PID %d: Multiple moves possible after move #%d\n",
                     getpid(), tmp._moves );
-        /* fork */
-    } else {
-        /* handle return / child exit */
-    }
 
 #ifdef DISPLAY_BOARD
     printBoard( getpid(), tmp );
 #endif
+
+        /* fork */
+    } else {
+        /* handle return / child exit */
+    }
 
     b = &tmp;
     return EXIT_SUCCESS;
