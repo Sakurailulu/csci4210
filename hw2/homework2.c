@@ -77,7 +77,7 @@ int tour( Board * b ) {
 
     int poss = findPossMoves( tmp );
     if ( poss > 1 ) {
-        printf( "PID %d: Multiple moves possible after move #%d\n", 
+        printf( "PID %d: Multiple moves possible after move #%d\n",
                     getpid(), tmp._moves );
         /* fork */
     } else {
@@ -106,11 +106,15 @@ int main( int argc, char * argv[] ) {
         int m = strtol( argv[1], &tmp, 10 ), n = strtol( argv[2], &tmp, 10 );
         if ( ( m > 2 ) && ( n > 2 ) ) {
 #ifdef DEBUG_MODE
-            printf( "\tvalid args... continuing...\n" );
+            printf( "    valid args, continuing...\n" );
 #endif
 
             /* Initializing Board struct to be used throughout. */
             /** Memory allocation. */
+#ifdef DEBUG_MODE
+            printf( "    intializing board...\n" );
+#endif
+
             Board touring;
             touring._x = m;                 touring._y = n;
             touring._grid = calloc( touring._y, sizeof( char* ) );
@@ -136,14 +140,30 @@ int main( int argc, char * argv[] ) {
             touring._grid[0][0] = 'k';      touring._moves = 1;
             touring._curr = (Pair){ ._x = 0, ._y = 0 };
 
+#ifdef DEBUG_MODE
+            printf( "        Board details:\n" );
+            printf( "        _x = %d, _y = %d, _moves = %d\n", touring._x,
+                        touring._y, touring._moves );
+            printf( "        _curr = (%d, %d)\n", touring._curr._x,
+                        touring._curr._y );
+#endif
+
             /* Touring simulation. */
+#ifdef DEBUG_MODE
+            printf( "    touring...\n" );
+#endif
+
             pid_t pid = getpid();
-            printf( "PID %d: Solving the knight's tour problem for a %dx%d board\n", 
+            printf( "PID %d: Solving the knight's tour problem for a %dx%d board\n",
                         pid, m, n );
 
             tour( &touring );
 
             /* Freeing allocated memory in board. */
+#ifdef DEBUG_MODE
+            printf( "    freeing memory...\n" );
+#endif
+
             for ( int i = 0; i < touring._y; ++i ) {
                 free( touring._grid[i] );   touring._grid[i] = NULL;
             }
