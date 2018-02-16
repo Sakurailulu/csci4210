@@ -100,14 +100,16 @@ int findPossMoves( Board b, Pair * moveTo ) {
  */
 void tour( Board * b ) {
 #ifdef DEBUG_MODE
-    printf( "    touring...\n" );
+    printf( "    %d touring...\n", getpid() );
 #endif
 
     Board tmp = *b;
 
-    Pair * moveTo = calloc( 8, sizeof( Pair ) );
+    Pair * moveTo = calloc( 8, sizeof( Pair ) ); 
+    printf( "here\n" );
     int poss = findPossMoves( tmp, moveTo );
-    moveTo = realloc( moveTo, ( poss * sizeof( Pair ) ) );
+    printf( "here\n" );
+    //moveTo = realloc( moveTo, ( poss * sizeof( Pair ) ) );
 #ifdef DEBUG_MODE
     printf( "        poss = %d\n", poss );
     for ( int i = 0; i < poss; ++i ) {
@@ -129,6 +131,11 @@ void tour( Board * b ) {
                 if ( ( pids[i] = fork() ) < 0 ) {
                     fprintf( stderr, "ERROR: fork() failed.\n" );
                 } else if ( pids[i] == 0 ) {
+                    tmp._curr = moveTo[i];
+                    tmp._grid[tmp._curr._y][tmp._curr._x] = 'k';
+                    ++tmp._moves;
+                    tour( &tmp );
+
                     free( moveTo );
                     for ( int j = 0; j < (*b)._rows; ++j ) {
                         free( (*b)._grid[j] );
@@ -144,7 +151,11 @@ void tour( Board * b ) {
                 --poss;
             }
         } else {
-
+            printf( "here\n" );
+            tmp._curr = moveTo[0];
+            tmp._grid[tmp._curr._y][tmp._curr._x] = 'k';
+            ++tmp._moves;
+            tour( &tmp );
         }
     } else {
         printf( "PID %d: Dead end after move #%d\n", getpid(), tmp._moves );
@@ -152,7 +163,6 @@ void tour( Board * b ) {
 
     free( moveTo );
     b = &tmp;
-    // return countMoves;
 }
 
 
