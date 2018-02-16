@@ -83,93 +83,12 @@ int findPossMoves( Board b, Pair * moveTo ) {
         if ( ( ( 0 <= tmpX ) && ( tmpX <= b._cols ) ) &&
                 ( ( 0 <= tmpY ) && ( tmpY <= b._rows ) ) &&
                 ( b._grid[tmpY][tmpX] != 'k' ) ) {
+            moveTo[numPoss] = (Pair){ ._x = tmpX, ._y = tmpY };
             ++numPoss;
-            moveTo[i] = (Pair){ ._x = tmpX, ._y = tmpY };
         }
     }
 
     return numPoss;
-
-    /*if ( ( b._curr._x + 2 ) <= b._cols ) {
-        if ( ( b._curr._y + 1 ) <= b._rows ) {
-#ifdef DEBUG_MODE
-            printf( "        moving right, then down...\n" );
-#endif
-
-            ++numPoss;
-            moveTo[( numPoss - 1 )] = (Pair){ ._x = ( b._curr._x + 2 ),
-                                              ._y = ( b._curr._y + 1 ) };
-        }
-
-        if ( ( b._curr._y - 1 ) >= 0 ) {
-#ifdef DEBUG_MODE
-            printf( "        moving right, then up...\n" );
-#endif
-            ++numPoss;
-            moveTo[( numPoss - 1 )] = (Pair){ ._x = ( b._curr._x + 2 ),
-                                              ._y = ( b._curr._y - 1 ) };
-        }
-    }
-
-    if ( ( b._curr._x - 2 ) >= 0 ) {
-        if ( ( b._curr._y + 1 ) <= b._rows ) {
-#ifdef DEBUG_MODE
-            printf( "        moving left, then down...\n" );
-#endif
-            ++numPoss;
-            moveTo[( numPoss - 1 )] = (Pair){ ._x = ( b._curr._x - 2 ),
-                                              ._y = ( b._curr._y + 1 ) };
-        }
-
-        if ( ( b._curr._y - 1 ) >= 0 ) {
-#ifdef DEBUG_MODE
-            printf( "        moving left, then up...\n" );
-#endif
-            ++numPoss;
-            moveTo[( numPoss - 1 )] = (Pair){ ._x = ( b._curr._x - 2 ),
-                                              ._y = ( b._curr._y - 1 ) };
-        }
-    }
-
-    if ( ( b._curr._y + 2 ) <= b._rows ) {
-        if ( ( b._curr._x + 1 ) <= b._cols ) {
-#ifdef DEBUG_MODE
-            printf( "        moving down, then right...\n" );
-#endif
-            ++numPoss;
-            moveTo[( numPoss - 1 )] = (Pair){ ._y = ( b._curr._y + 2 ),
-                                              ._x = ( b._curr._x + 1 ) };
-        }
-
-        if ( ( b._curr._x - 1 ) >= 0 ) {
-#ifdef DEBUG_MODE
-            printf( "        moving down, then left...\n" );
-#endif
-            ++numPoss;
-            moveTo[( numPoss - 1 )] = (Pair){ ._y = ( b._curr._y + 2 ),
-                                              ._x = ( b._curr._x - 1 ) };
-        }
-    }
-
-    if ( ( b._curr._y - 2 ) >= 0 ) {
-        if ( ( b._curr._x + 1 ) <= b._cols ) {
-#ifdef DEBUG_MODE
-            printf( "        moving up, then right...\n" );
-#endif
-            ++numPoss;
-            moveTo[( numPoss - 1 )] = (Pair){ ._y = ( b._curr._y - 2 ),
-                                              ._x = ( b._curr._x + 1 ) };
-        }
-
-        if ( ( b._curr._x - 1 ) >= 0 ) {
-#ifdef DEBUG_MODE
-            printf( "        moving up, then left...\n" );
-#endif
-            ++numPoss;
-            moveTo[( numPoss - 1 )] = (Pair){ ._y = ( b._curr._y - 2 ),
-                                              ._x = ( b._curr._x - 1 ) };
-        }
-    } */
 }
 
 
@@ -210,7 +129,8 @@ void tour( Board * b ) {
                 if ( ( pids[i] = fork() ) < 0 ) {
                     fprintf( stderr, "ERROR: fork() failed.\n" );
                 } else if ( pids[i] == 0 ) {
-                    /* CHILD */
+                    free( moveTo );
+                    exit( 0 );
                 }
             }
             pid_t pid;
