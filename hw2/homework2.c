@@ -155,7 +155,7 @@ int findPossMoves( Board b, Pair * moveTo ) {
  * @modifies    b
  * @effects     marks spots visited by changing from '.' to 'k'.
  */
-int tour( Board * b ) {
+void tour( Board * b ) {
 #ifdef DEBUG_MODE
     printf( "    touring...\n" );
 #endif
@@ -173,7 +173,7 @@ int tour( Board * b ) {
     }
 #endif
 
-    if ( poss > 1 ) {
+    if ( poss > 0 ) {
         printf( "PID %d: Multiple moves possible after move #%d\n",
                     getpid(), tmp._moves );
 
@@ -181,27 +181,45 @@ int tour( Board * b ) {
     printBoard( getpid(), tmp );
 #endif
 
-        pid_t pids[poss];
-        for ( int i = 0; i < poss; ++i ) {
-            if ( ( pids[i] = fork() ) < 0 ) {
-                fprintf( stderr, "ERROR: fork() failed." );
+        if ( poss > 1 ) {
+            pid_t pids[poss];
+            for ( int i = 0; i < poss; ++i ) {
+                if ( ( pids[i] = fork() ) < 0 ) {
+                    fprintf( stderr, "ERROR: fork() failed." );
+                    abort();
+                } else if ( pids[i] == 0 ) {
+                    if ( tmp._grid[ moveTo[i]._y ][ moveTo[i]._x ] == 'k' ) {
+                        exit( 0 );
+                    } else {
+                        tmp._curr._x = moveTo[i]._x;
+                        tmp._curr._y = moveTo[i]._y;
+                        tmp._grid[ tmp._curr._y ][ tmp._curr._x ] = 'k';
+                        ++tmp._moves;
+                        tour( &tmp );
+                        exit( 0 );
+                    }
+                } else {
+                    /* PARENT */
+                }
+            }
+        } else {                    /* poss == 1 */
+            if ( tmp._grid[ moveTo[0]._y ][ moveTo[0]._x ] == 'k' ) {
                 abort();
-            } else if ( pids[i] == 0 ) {
-                tmp._curr._x = moveTo[i]._x;
-                tmp._curr._y = moveTo[i]._y;
-                tmp._grid[ tmp._curr._y ][ tmp._curr._x ] = 'k';
-                tour( &tmp );
             } else {
-                exit( 0 );
+                tmp._curr._x = moveTo[0]._x;
+                tmp._curr._y = moveTo[0]._y;
+                tmp._grid[ tmp._curr._y ][ tmp._curr._x ] = 'k';
+                ++tmp._moves;
+                abort();
             }
         }
     } else {
-        /* handle return / child exit */
+
     }
 
     free( moveTo );
     b = &tmp;
-    return EXIT_SUCCESS;
+    return countMoves;
 }
 
 
@@ -229,7 +247,6 @@ int main( int argc, char * argv[] ) {
 
             Board touring;
             touring._cols = m;                  touring._rows = n;
-            /* touring._rows = m;                  touring._cols = n; */
             touring._grid = calloc( touring._rows, sizeof( char* ) );
             if ( touring._grid == NULL ) {
                 fprintf( stderr, "ERROR: calloc() failed." );
@@ -250,7 +267,7 @@ int main( int argc, char * argv[] ) {
                     touring._grid[i][j] = '.';
                 }
             }
-            touring._grid[0][0] = 'k';      touring._moves = 1;
+            touring._grid[0][0] = 'k';          touring._moves = 1;
             touring._curr = (Pair){ ._x = 0, ._y = 0 };
 
 #ifdef DEBUG_MODE
@@ -274,19 +291,10 @@ int main( int argc, char * argv[] ) {
 #endif
 
             for ( int i = 0; i < touring._rows; ++i ) {
-                free( touring._grid[i] );   touring._grid[i] = NULL;
+                free( touring._grid[i] );       touring._grid[i] = NULL;
             }
-            free( touring._grid );          touring._grid = NULL;
+            free( touring._grid );              touring._grid = NULL;
             return EXIT_SUCCESS;
-
-            /* Check for failure while touring. */
-            /* int failed = tour( &touring ); 
-            if ( !failed ) {
-                return EXIT_SUCCESS;
-            } else {
-                fprintf( stderr, "ERROR: Tour failed.\n" );
-                return EXIT_FAILURE;
-            } */
         } else {
             /* ( m <= 2 ) && ( n <= 2 ) */
             fprintf( stderr, "ERROR: Invalid argument(s)\n" );
