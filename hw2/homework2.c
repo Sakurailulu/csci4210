@@ -39,10 +39,19 @@ typedef struct {
     char ** _grid;
 } Board;
 
+const Pair moves[8] = { (Pair){ ._x = +1, ._y = -2 },   /* up, then right */
+                        (Pair){ ._x = +2, ._y = -1 },   /* right, then up */
+                        (Pair){ ._x = +2, ._y = +1 },   /* right, then down */
+                        (Pair){ ._x = +1, ._y = +2 },   /* down, then right */
+                        (Pair){ ._x = -1, ._y = +2 },   /* down, then left */
+                        (Pair){ ._x = -2, ._y = +1 },   /* left, then down */
+                        (Pair){ ._x = -2, ._y = -1 },   /* left, then up */
+                        (Pair){ ._x = -1, ._y = -2 } }; /* up, then left */
+
 
 void printBoard( pid_t pid, Board b );
 int findPossMoves( Board b, Pair * moveTo );
-int tour( Board * b );
+void tour( Board * b );
 
 
 /* ------------------------------------------------------------------------- */
@@ -63,8 +72,25 @@ void printBoard( pid_t pid, Board b ) {
  */
 int findPossMoves( Board b, Pair * moveTo ) {
     int numPoss = 0;
+    //Pair moves[8] = { (Pair){ ._x = 1, ._y = -2 },      /* up, then right */
+    //                  (Pair){ ._x = 2, ._y = -1 },      /* right, then up */
+    //                  (Pair){ ._x = 2, ._y = 1 },       /* right, then down */
+    //                  (Pair){ ._x = 1, ._y = 2 },       /* down, then right */
+    //                  (Pair){ ._x = -1, ._y = 2 },      /* down, then left */
+    //                  (Pair){ ._x = -2, ._y = 1 },      /* left, then down */
+    //                  (Pair){ ._x = -2, ._y = -1 },     /* left, then up */
+    //                  (Pair){ ._x = -1, ._y = -2 } };   /* up, then left */
 
-    if ( ( b._curr._x + 2 ) <= b._cols ) {
+    for ( int i = 0; i < 8; ++i ) {
+        int tmpX = b._curr._x + moves[i]._x, tmpY = b._curr._y + moves[i]._y;
+        if ( ( 0 <= tmpX <= b._cols ) && ( 0 <= tmpY <= b._rows ) &&
+                    ( b._grid[tmpY][tmpX] != 'k' ) ) {
+            ++numPoss;
+            moveTo[i] = (Pair){ ._x = tmpX, ._y = tmpY };
+        }
+    }
+
+    /*if ( ( b._curr._x + 2 ) <= b._cols ) {
         if ( ( b._curr._y + 1 ) <= b._rows ) {
 #ifdef DEBUG_MODE
             printf( "        moving right, then down...\n" );
@@ -143,7 +169,7 @@ int findPossMoves( Board b, Pair * moveTo ) {
             moveTo[( numPoss - 1 )] = (Pair){ ._y = ( b._curr._y - 2 ),
                                               ._x = ( b._curr._x - 1 ) };
         }
-    }
+    } */
 
     return numPoss;
 }
@@ -164,7 +190,7 @@ void tour( Board * b ) {
 
     Pair * moveTo = calloc( 8, sizeof( Pair ) );
     int poss = findPossMoves( tmp, moveTo );
-    moveTo = realloc( moveTo, ( poss * sizeof( Pair ) ) );
+    // moveTo = realloc( moveTo, ( poss * sizeof( Pair ) ) );
 #ifdef DEBUG_MODE
     printf( "            poss = %d\n", poss );
     for ( int i = 0; i < poss; ++i ) {
@@ -174,52 +200,38 @@ void tour( Board * b ) {
 #endif
 
     if ( poss > 0 ) {
-        printf( "PID %d: Multiple moves possible after move #%d\n",
-                    getpid(), tmp._moves );
-
+        if ( poss > 1 ) {
+            printf( "PID %d: Multiple moves possible after move #%d\n",
+                        getpid(), tmp._moves );
 #ifdef DISPLAY_BOARD
-    printBoard( getpid(), tmp );
+            printBoard( getpid(), tmp );
 #endif
 
-        if ( poss > 1 ) {
             pid_t pids[poss];
             for ( int i = 0; i < poss; ++i ) {
                 if ( ( pids[i] = fork() ) < 0 ) {
                     fprintf( stderr, "ERROR: fork() failed." );
-                    abort();
                 } else if ( pids[i] == 0 ) {
-                    if ( tmp._grid[ moveTo[i]._y ][ moveTo[i]._x ] == 'k' ) {
-                        exit( 0 );
-                    } else {
-                        tmp._curr._x = moveTo[i]._x;
-                        tmp._curr._y = moveTo[i]._y;
-                        tmp._grid[ tmp._curr._y ][ tmp._curr._x ] = 'k';
-                        ++tmp._moves;
-                        tour( &tmp );
-                        exit( 0 );
-                    }
-                } else {
-                    /* PARENT */
+                    /* CHILD */
                 }
             }
-        } else {                    /* poss == 1 */
-            if ( tmp._grid[ moveTo[0]._y ][ moveTo[0]._x ] == 'k' ) {
-                abort();
-            } else {
-                tmp._curr._x = moveTo[0]._x;
-                tmp._curr._y = moveTo[0]._y;
-                tmp._grid[ tmp._curr._y ][ tmp._curr._x ] = 'k';
-                ++tmp._moves;
-                abort();
+
+            pid_t pid;
+            while ( poss > 0 ) {
+                pid = wait( NULL );
+                printf( "Child exited." );
+                --poss;
             }
+        } else {
+
         }
     } else {
-
+        printf( "PID %d: Dead end after move #%d", getpid(), tmp._moves );
     }
 
     free( moveTo );
     b = &tmp;
-    return countMoves;
+    // return countMoves;
 }
 
 
@@ -280,7 +292,7 @@ int main( int argc, char * argv[] ) {
 
             /* Touring simulation. */
             pid_t pid = getpid();
-            printf( "PID %d: Solving the knight's tour problem for a %dx%d board\n",
+            printf( "PID %d: Solving the knight's tour problem for a %dx%d board.\n",
                         pid, touring._cols, touring._rows );
 
             tour( &touring );
