@@ -41,7 +41,7 @@ typedef struct {
 
 
 void printBoard( pid_t pid, Board b );
-int findPossMoves( Board b, Pair ** moveTo );
+int findPossMoves( Board b, Pair * moveTo );
 int tour( Board * b );
 
 
@@ -61,95 +61,87 @@ void printBoard( pid_t pid, Board b ) {
  * @param       b, Board struct to search.
  * @return      count of possible moves found.
  */
-int findPossMoves( Board b, Pair ** moveTo ) {
+int findPossMoves( Board b, Pair * moveTo ) {
     int numPoss = 0;
     
     if ( ( b._curr._x + 2 ) <= b._cols ) {
         if ( ( b._curr._y + 1 ) <= b._rows ) {
 #ifdef DEBUG_MODE
-            printf( "            moving right, then down...\n" );
+            printf( "        moving right, then down...\n" );
 #endif
 
             ++numPoss;
-            *moveTo = realloc( *moveTo, ( numPoss * sizeof( Pair ) ) );
-            *moveTo[( numPoss - 1 )] = (Pair){ ._x = ( b._curr._x + 2 ),
-                                               ._y = ( b._curr._y + 1 ) };
+            moveTo[( numPoss - 1 )] = (Pair){ ._x = ( b._curr._x + 2 ),
+                                              ._y = ( b._curr._y + 1 ) };
         }
 
         if ( ( b._curr._y - 1 ) >= 0 ) {
 #ifdef DEBUG_MODE
-            printf( "            moving right, then up...\n" );
+            printf( "        moving right, then up...\n" );
 #endif
             ++numPoss;
-            *moveTo = realloc( *moveTo, ( numPoss * sizeof( Pair ) ) );
-            *moveTo[( numPoss - 1 )] = (Pair){ ._x = ( b._curr._x + 2 ),
-                                               ._y = ( b._curr._y - 1 ) };
+            moveTo[( numPoss - 1 )] = (Pair){ ._x = ( b._curr._x + 2 ),
+                                              ._y = ( b._curr._y - 1 ) };
         }
     }
 
     if ( ( b._curr._x - 2 ) >= 0 ) {
         if ( ( b._curr._y + 1 ) <= b._rows ) {
 #ifdef DEBUG_MODE
-            printf( "            moving left, then down...\n" );
+            printf( "        moving left, then down...\n" );
 #endif
             ++numPoss;
-            *moveTo = realloc( *moveTo, ( numPoss * sizeof( Pair ) ) );
-            *moveTo[( numPoss - 1 )] = (Pair){ ._x = ( b._curr._x - 2 ),
-                                               ._y = ( b._curr._y + 1 ) };
+            moveTo[( numPoss - 1 )] = (Pair){ ._x = ( b._curr._x - 2 ),
+                                              ._y = ( b._curr._y + 1 ) };
         }
 
         if ( ( b._curr._y - 1 ) >= 0 ) {
 #ifdef DEBUG_MODE
-            printf( "            moving left, then up...\n" );
+            printf( "        moving left, then up...\n" );
 #endif
             ++numPoss;
-            *moveTo = realloc( *moveTo, ( numPoss * sizeof( Pair ) ) );
-            *moveTo[( numPoss - 1 )] = (Pair){ ._x = ( b._curr._x - 2 ),
-                                               ._y = ( b._curr._y - 1 ) };
+            moveTo[( numPoss - 1 )] = (Pair){ ._x = ( b._curr._x - 2 ),
+                                              ._y = ( b._curr._y - 1 ) };
         }
     }
 
     if ( ( b._curr._y + 2 ) <= b._rows ) {
         if ( ( b._curr._x + 1 ) <= b._cols ) {
 #ifdef DEBUG_MODE
-            printf( "            moving down, then right...\n" );
+            printf( "        moving down, then right...\n" );
 #endif
             ++numPoss;
-            *moveTo = realloc( *moveTo, ( numPoss * sizeof( Pair ) ) );
-            *moveTo[( numPoss - 1 )] = (Pair){ ._y = ( b._curr._y + 1 ),
-                                               ._x = ( b._curr._x + 2 ) };
+            moveTo[( numPoss - 1 )] = (Pair){ ._y = ( b._curr._y + 2 ),
+                                              ._x = ( b._curr._x + 1 ) };
         }
 
         if ( ( b._curr._x - 1 ) >= 0 ) {
 #ifdef DEBUG_MODE
-            printf( "            moving down, then left...\n" );
+            printf( "        moving down, then left...\n" );
 #endif
             ++numPoss;
-            *moveTo = realloc( *moveTo, ( numPoss * sizeof( Pair ) ) );
-            *moveTo[( numPoss - 1 )] = (Pair){ ._y = ( b._curr._y + 1 ),
-                                               ._x = ( b._curr._x - 2 ) };
+            moveTo[( numPoss - 1 )] = (Pair){ ._y = ( b._curr._y + 2 ),
+                                              ._x = ( b._curr._x - 1 ) };
         }
     }
 
     if ( ( b._curr._y - 2 ) >= 0 ) {
         if ( ( b._curr._x + 1 ) <= b._cols ) {
 #ifdef DEBUG_MODE
-            printf( "            moving up, then right...\n" );
+            printf( "        moving up, then right...\n" );
 #endif
             ++numPoss;
-            *moveTo = realloc( *moveTo, ( numPoss * sizeof( Pair ) ) );
-            *moveTo[( numPoss - 1 )] = (Pair){ ._y = ( b._curr._y - 1 ),
-                                               ._x = ( b._curr._x + 2 ) };
+            moveTo[( numPoss - 1 )] = (Pair){ ._y = ( b._curr._y - 2 ),
+                                              ._x = ( b._curr._x + 1 ) };
         }
 
         if ( ( b._curr._x - 1 ) >= 0 ) {
 #ifdef DEBUG_MODE
-            printf( "            moving up, then left...\n" );
+            printf( "        moving up, then left...\n" );
 #endif
             ++numPoss;
-            *moveTo = realloc( *moveTo, ( numPoss * sizeof( Pair ) ) );
-            *moveTo[( numPoss - 1 )] = (Pair){ ._y = ( b._curr._y - 1 ),
-                                               ._x = ( b._curr._x - 2 ) };
+            moveTo[( numPoss - 1 )] = (Pair){ ._y = ( b._curr._y - 2 ),
+                                              ._x = ( b._curr._x - 1 ) };
         }
     }
 
@@ -166,12 +158,13 @@ int findPossMoves( Board b, Pair ** moveTo ) {
 int tour( Board * b ) {
     Board tmp = *b;
 
-    Pair * moveTo = calloc( 0, sizeof( Pair ) );
-    int poss = findPossMoves( tmp, &moveTo );
+    Pair * moveTo = calloc( 8, sizeof( Pair ) );
+    int poss = findPossMoves( tmp, moveTo );
+    moveTo = realloc( moveTo, ( poss * sizeof( Pair ) ) );
 #ifdef DEBUG_MODE
-    printf( "        poss = %d\n", poss );
+    printf( "            poss = %d\n", poss );
     for ( int i = 0; i < poss; ++i ) {
-        printf( "            move %d: (%d, %d)\n", ( i + 1 ), moveTo[i]._x,
+        printf( "                move %d: (%d, %d)\n", ( i + 1 ), moveTo[i]._x,
                     moveTo[i]._y );
     }
 #endif
