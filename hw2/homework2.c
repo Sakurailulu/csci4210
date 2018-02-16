@@ -156,6 +156,10 @@ int findPossMoves( Board b, Pair * moveTo ) {
  * @effects     marks spots visited by changing from '.' to 'k'.
  */
 int tour( Board * b ) {
+#ifdef DEBUG_MODE
+    printf( "    touring...\n" );
+#endif
+
     Board tmp = *b;
 
     Pair * moveTo = calloc( 8, sizeof( Pair ) );
@@ -177,7 +181,18 @@ int tour( Board * b ) {
     printBoard( getpid(), tmp );
 #endif
 
-        /* fork */
+        pid_t pids[poss];
+        for ( int i = 0; i < poss; ++i ) {
+            if ( ( pids[i] = fork() ) < 0 ) {
+                fprintf( stderr, "ERROR: fork() failed." );
+                abort();
+            } else if ( pids[i] == 0 ) {
+                tmp._grid[ moveTo[i]._y ][ moveTo[i]._x ] = 'k';
+                tour( &tmp );
+            } else {
+                exit( 0 );
+            }
+        }
     } else {
         /* handle return / child exit */
     }
@@ -245,10 +260,6 @@ int main( int argc, char * argv[] ) {
 #endif
 
             /* Touring simulation. */
-#ifdef DEBUG_MODE
-            printf( "    touring...\n" );
-#endif
-
             pid_t pid = getpid();
             printf( "PID %d: Solving the knight's tour problem for a %dx%d board\n",
                         pid, touring._cols, touring._rows );
