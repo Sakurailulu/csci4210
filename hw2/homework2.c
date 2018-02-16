@@ -105,7 +105,7 @@ void tour( Board * b ) {
 
     Board tmp = *b;
 
-    Pair * moveTo = malloc( 8 * sizeof( Pair ) );
+    Pair * moveTo = calloc( 8, sizeof( Pair ) );
     int poss = findPossMoves( tmp, moveTo );
     moveTo = realloc( moveTo, ( poss * sizeof( Pair ) ) );
 #ifdef DEBUG_MODE
@@ -130,6 +130,10 @@ void tour( Board * b ) {
                     fprintf( stderr, "ERROR: fork() failed.\n" );
                 } else if ( pids[i] == 0 ) {
                     free( moveTo );
+                    for ( int j = 0; j < (*b)._rows; ++j ) {
+                        free( (*b)._grid[j] );
+                    }
+                    free( (*b)._grid );
                     exit( 0 );
                 }
             }
