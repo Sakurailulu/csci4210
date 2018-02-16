@@ -63,7 +63,7 @@ void printBoard( pid_t pid, Board b ) {
  */
 int findPossMoves( Board b, Pair * moveTo ) {
     int numPoss = 0;
-    
+
     if ( ( b._curr._x + 2 ) <= b._cols ) {
         if ( ( b._curr._y + 1 ) <= b._rows ) {
 #ifdef DEBUG_MODE
@@ -275,7 +275,7 @@ int main( int argc, char * argv[] ) {
                 return EXIT_FAILURE;
             } */
         } else {
-            /* ( m <= 2 ) && ( n <= 3 ) */
+            /* ( m <= 2 ) && ( n <= 2 ) */
             fprintf( stderr, "ERROR: Invalid argument(s)\n" );
             fprintf( stderr, "USAGE: %s <m> <n>\n", argv[0] );
             return EXIT_FAILURE;
