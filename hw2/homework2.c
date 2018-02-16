@@ -20,6 +20,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/wait.h>
 #include <unistd.h>
 
 /* Helper structs. */
@@ -83,8 +84,9 @@ int findPossMoves( Board b, Pair * moveTo ) {
 
     for ( int i = 0; i < 8; ++i ) {
         int tmpX = b._curr._x + moves[i]._x, tmpY = b._curr._y + moves[i]._y;
-        if ( ( 0 <= tmpX <= b._cols ) && ( 0 <= tmpY <= b._rows ) &&
-                    ( b._grid[tmpY][tmpX] != 'k' ) ) {
+        if ( ( ( 0 <= tmpX ) && ( tmpX <= b._cols ) ) && 
+                ( ( 0 <= tmpY ) && ( tmpY <= b._rows ) ) &&
+                ( b._grid[tmpY][tmpX] != 'k' ) ) {
             ++numPoss;
             moveTo[i] = (Pair){ ._x = tmpX, ._y = tmpY };
         }
@@ -188,14 +190,14 @@ void tour( Board * b ) {
 
     Board tmp = *b;
 
-    Pair * moveTo = calloc( 8, sizeof( Pair ) );
+    Pair * moveTo = malloc( 8 * sizeof( Pair ) );
     int poss = findPossMoves( tmp, moveTo );
-    // moveTo = realloc( moveTo, ( poss * sizeof( Pair ) ) );
+    moveTo = realloc( moveTo, ( poss * sizeof( Pair ) ) );
 #ifdef DEBUG_MODE
-    printf( "            poss = %d\n", poss );
+    printf( "        poss = %d\n", poss );
     for ( int i = 0; i < poss; ++i ) {
-        printf( "                move %d: (%d, %d)\n", ( i + 1 ), moveTo[i]._x,
-                    moveTo[i]._y );
+        printf( "            move %d: (%d, %d)\n", ( i + 1 ), moveTo[i]._x, 
+                moveTo[i]._y );
     }
 #endif
 
@@ -210,23 +212,22 @@ void tour( Board * b ) {
             pid_t pids[poss];
             for ( int i = 0; i < poss; ++i ) {
                 if ( ( pids[i] = fork() ) < 0 ) {
-                    fprintf( stderr, "ERROR: fork() failed." );
+                    fprintf( stderr, "ERROR: fork() failed.\n" );
                 } else if ( pids[i] == 0 ) {
                     /* CHILD */
                 }
             }
-
             pid_t pid;
             while ( poss > 0 ) {
                 pid = wait( NULL );
-                printf( "Child exited." );
+                printf( "Child with PID %d exited.\n", pid );
                 --poss;
             }
         } else {
 
         }
     } else {
-        printf( "PID %d: Dead end after move #%d", getpid(), tmp._moves );
+        printf( "PID %d: Dead end after move #%d\n", getpid(), tmp._moves );
     }
 
     free( moveTo );
