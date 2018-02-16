@@ -32,8 +32,8 @@ typedef struct {
 
 /** Provides representation of board on which to perform the knight's tour. */
 typedef struct {
-    int _rows;
     int _cols;
+    int _rows;
     int _moves;
     Pair _curr;
     char ** _grid;
@@ -41,7 +41,7 @@ typedef struct {
 
 
 void printBoard( pid_t pid, Board b );
-int findPossMoves( Board b );
+int findPossMoves( Board b, Pair ** moveTo );
 int tour( Board * b );
 
 
@@ -51,7 +51,7 @@ int tour( Board * b );
  * @param       b, Board struct to print.
  */
 void printBoard( pid_t pid, Board b ) {
-    for ( int i = 0; i < b._cols; ++i ) {
+    for ( int i = 0; i < b._rows; ++i ) {
         printf( "PID %d:   %s\n", pid, b._grid[i] );
     }
 }
@@ -61,8 +61,99 @@ void printBoard( pid_t pid, Board b ) {
  * @param       b, Board struct to search.
  * @return      count of possible moves found.
  */
-int findPossMoves( Board b ) {
-    return 2;
+int findPossMoves( Board b, Pair ** moveTo ) {
+    int numPoss = 0;
+    
+    if ( ( b._curr._x + 2 ) <= b._cols ) {
+        if ( ( b._curr._y + 1 ) <= b._rows ) {
+#ifdef DEBUG_MODE
+            printf( "            moving right, then down...\n" );
+#endif
+
+            ++numPoss;
+            *moveTo = realloc( *moveTo, ( numPoss * sizeof( Pair ) ) );
+            *moveTo[( numPoss - 1 )] = (Pair){ ._x = ( b._curr._x + 2 ),
+                                               ._y = ( b._curr._y + 1 ) };
+        }
+
+        if ( ( b._curr._y - 1 ) >= 0 ) {
+#ifdef DEBUG_MODE
+            printf( "            moving right, then up...\n" );
+#endif
+            ++numPoss;
+            *moveTo = realloc( *moveTo, ( numPoss * sizeof( Pair ) ) );
+            *moveTo[( numPoss - 1 )] = (Pair){ ._x = ( b._curr._x + 2 ),
+                                               ._y = ( b._curr._y - 1 ) };
+        }
+    }
+
+    if ( ( b._curr._x - 2 ) >= 0 ) {
+        if ( ( b._curr._y + 1 ) <= b._rows ) {
+#ifdef DEBUG_MODE
+            printf( "            moving left, then down...\n" );
+#endif
+            ++numPoss;
+            *moveTo = realloc( *moveTo, ( numPoss * sizeof( Pair ) ) );
+            *moveTo[( numPoss - 1 )] = (Pair){ ._x = ( b._curr._x - 2 ),
+                                               ._y = ( b._curr._y + 1 ) };
+        }
+
+        if ( ( b._curr._y - 1 ) >= 0 ) {
+#ifdef DEBUG_MODE
+            printf( "            moving left, then up...\n" );
+#endif
+            ++numPoss;
+            *moveTo = realloc( *moveTo, ( numPoss * sizeof( Pair ) ) );
+            *moveTo[( numPoss - 1 )] = (Pair){ ._x = ( b._curr._x - 2 ),
+                                               ._y = ( b._curr._y - 1 ) };
+        }
+    }
+
+    if ( ( b._curr._y + 2 ) <= b._rows ) {
+        if ( ( b._curr._x + 1 ) <= b._cols ) {
+#ifdef DEBUG_MODE
+            printf( "            moving down, then right...\n" );
+#endif
+            ++numPoss;
+            *moveTo = realloc( *moveTo, ( numPoss * sizeof( Pair ) ) );
+            *moveTo[( numPoss - 1 )] = (Pair){ ._y = ( b._curr._y + 1 ),
+                                               ._x = ( b._curr._x + 2 ) };
+        }
+
+        if ( ( b._curr._x - 1 ) >= 0 ) {
+#ifdef DEBUG_MODE
+            printf( "            moving down, then left...\n" );
+#endif
+            ++numPoss;
+            *moveTo = realloc( *moveTo, ( numPoss * sizeof( Pair ) ) );
+            *moveTo[( numPoss - 1 )] = (Pair){ ._y = ( b._curr._y + 1 ),
+                                               ._x = ( b._curr._x - 2 ) };
+        }
+    }
+
+    if ( ( b._curr._y - 2 ) >= 0 ) {
+        if ( ( b._curr._x + 1 ) <= b._cols ) {
+#ifdef DEBUG_MODE
+            printf( "            moving up, then right...\n" );
+#endif
+            ++numPoss;
+            *moveTo = realloc( *moveTo, ( numPoss * sizeof( Pair ) ) );
+            *moveTo[( numPoss - 1 )] = (Pair){ ._y = ( b._curr._y - 1 ),
+                                               ._x = ( b._curr._x + 2 ) };
+        }
+
+        if ( ( b._curr._x - 1 ) >= 0 ) {
+#ifdef DEBUG_MODE
+            printf( "            moving up, then left...\n" );
+#endif
+            ++numPoss;
+            *moveTo = realloc( *moveTo, ( numPoss * sizeof( Pair ) ) );
+            *moveTo[( numPoss - 1 )] = (Pair){ ._y = ( b._curr._y - 1 ),
+                                               ._x = ( b._curr._x - 2 ) };
+        }
+    }
+
+    return numPoss;
 }
 
 
@@ -75,7 +166,16 @@ int findPossMoves( Board b ) {
 int tour( Board * b ) {
     Board tmp = *b;
 
-    int poss = findPossMoves( tmp );
+    Pair * moveTo = calloc( 0, sizeof( Pair ) );
+    int poss = findPossMoves( tmp, &moveTo );
+#ifdef DEBUG_MODE
+    printf( "        poss = %d\n", poss );
+    for ( int i = 0; i < poss; ++i ) {
+        printf( "            move %d: (%d, %d)\n", ( i + 1 ), moveTo[i]._x,
+                    moveTo[i]._y );
+    }
+#endif
+
     if ( poss > 1 ) {
         printf( "PID %d: Multiple moves possible after move #%d\n",
                     getpid(), tmp._moves );
@@ -89,6 +189,7 @@ int tour( Board * b ) {
         /* handle return / child exit */
     }
 
+    free( moveTo );
     b = &tmp;
     return EXIT_SUCCESS;
 }
@@ -117,14 +218,15 @@ int main( int argc, char * argv[] ) {
 #endif
 
             Board touring;
-            touring._rows = m;                 touring._cols = n;
-            touring._grid = calloc( touring._cols, sizeof( char* ) );
+            touring._cols = m;                  touring._rows = n;
+            /* touring._rows = m;                  touring._cols = n; */
+            touring._grid = calloc( touring._rows, sizeof( char* ) );
             if ( touring._grid == NULL ) {
                 fprintf( stderr, "ERROR: calloc() failed." );
                 return EXIT_FAILURE;
             } else {
-                for ( int i = 0; i < touring._cols; ++i ) {
-                    touring._grid[i] = calloc( touring._rows, sizeof( char ) );
+                for ( int i = 0; i < touring._rows; ++i ) {
+                    touring._grid[i] = calloc( touring._cols, sizeof( char ) );
                     if ( touring._grid[i] == NULL ) {
                         fprintf( stderr, "ERROR: calloc() failed." );
                         return EXIT_FAILURE;
@@ -133,8 +235,8 @@ int main( int argc, char * argv[] ) {
             }
 
             /** Fill grid with marker values. */
-            for ( int i = 0; i < touring._cols; ++i ) {
-                for ( int j = 0; j < touring._rows; ++j ) {
+            for ( int i = 0; i < touring._rows; ++i ) {
+                for ( int j = 0; j < touring._cols; ++j ) {
                     touring._grid[i][j] = '.';
                 }
             }
@@ -143,8 +245,8 @@ int main( int argc, char * argv[] ) {
 
 #ifdef DEBUG_MODE
             printf( "        Board details:\n" );
-            printf( "        _x = %d, _y = %d, _moves = %d\n", touring._rows,
-                        touring._cols, touring._moves );
+            printf( "        _x = %d, _y = %d, _moves = %d\n", touring._cols,
+                        touring._rows, touring._moves );
             printf( "        _curr = (%d, %d)\n", touring._curr._x,
                         touring._curr._y );
 #endif
@@ -156,7 +258,7 @@ int main( int argc, char * argv[] ) {
 
             pid_t pid = getpid();
             printf( "PID %d: Solving the knight's tour problem for a %dx%d board\n",
-                        pid, touring._rows, touring._cols );
+                        pid, touring._cols, touring._rows );
 
             tour( &touring );
 
@@ -165,7 +267,7 @@ int main( int argc, char * argv[] ) {
             printf( "    freeing memory...\n" );
 #endif
 
-            for ( int i = 0; i < touring._cols; ++i ) {
+            for ( int i = 0; i < touring._rows; ++i ) {
                 free( touring._grid[i] );   touring._grid[i] = NULL;
             }
             free( touring._grid );          touring._grid = NULL;
