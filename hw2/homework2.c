@@ -40,6 +40,13 @@ typedef struct {
     char ** _grid;
 } Board;
 
+
+/* Initial method declarations. */
+void printBoard( pid_t pid, Board b );
+int findPossMoves( Board b, Pair * moveTo );
+void tour( Board * b );
+
+/* Constant array with all possible movements. */
 const Pair moves[8] = { (Pair){ ._x = +1, ._y = -2 },   /* up, then right */
                         (Pair){ ._x = +2, ._y = -1 },   /* right, then up */
                         (Pair){ ._x = +2, ._y = +1 },   /* right, then down */
@@ -48,11 +55,6 @@ const Pair moves[8] = { (Pair){ ._x = +1, ._y = -2 },   /* up, then right */
                         (Pair){ ._x = -2, ._y = +1 },   /* left, then down */
                         (Pair){ ._x = -2, ._y = -1 },   /* left, then up */
                         (Pair){ ._x = -1, ._y = -2 } }; /* up, then left */
-
-
-void printBoard( pid_t pid, Board b );
-int findPossMoves( Board b, Pair * moveTo );
-void tour( Board * b );
 
 
 /* ------------------------------------------------------------------------- */
@@ -69,28 +71,24 @@ void printBoard( pid_t pid, Board b ) {
 
 /* Finds count of possible moves from current position.
  * @param       b, Board struct to search.
+ *              moveTo, Pair struct pointer to store valid next moves.
  * @return      count of possible moves found.
+ * @modifies    moveTo
+ * @effects     adds Pairs with valid next moves.
  */
 int findPossMoves( Board b, Pair * moveTo ) {
     int numPoss = 0;
-    //Pair moves[8] = { (Pair){ ._x = 1, ._y = -2 },      /* up, then right */
-    //                  (Pair){ ._x = 2, ._y = -1 },      /* right, then up */
-    //                  (Pair){ ._x = 2, ._y = 1 },       /* right, then down */
-    //                  (Pair){ ._x = 1, ._y = 2 },       /* down, then right */
-    //                  (Pair){ ._x = -1, ._y = 2 },      /* down, then left */
-    //                  (Pair){ ._x = -2, ._y = 1 },      /* left, then down */
-    //                  (Pair){ ._x = -2, ._y = -1 },     /* left, then up */
-    //                  (Pair){ ._x = -1, ._y = -2 } };   /* up, then left */
-
     for ( int i = 0; i < 8; ++i ) {
         int tmpX = b._curr._x + moves[i]._x, tmpY = b._curr._y + moves[i]._y;
-        if ( ( ( 0 <= tmpX ) && ( tmpX <= b._cols ) ) && 
+        if ( ( ( 0 <= tmpX ) && ( tmpX <= b._cols ) ) &&
                 ( ( 0 <= tmpY ) && ( tmpY <= b._rows ) ) &&
                 ( b._grid[tmpY][tmpX] != 'k' ) ) {
             ++numPoss;
             moveTo[i] = (Pair){ ._x = tmpX, ._y = tmpY };
         }
     }
+
+    return numPoss;
 
     /*if ( ( b._curr._x + 2 ) <= b._cols ) {
         if ( ( b._curr._y + 1 ) <= b._rows ) {
@@ -172,8 +170,6 @@ int findPossMoves( Board b, Pair * moveTo ) {
                                               ._x = ( b._curr._x - 1 ) };
         }
     } */
-
-    return numPoss;
 }
 
 
@@ -196,7 +192,7 @@ void tour( Board * b ) {
 #ifdef DEBUG_MODE
     printf( "        poss = %d\n", poss );
     for ( int i = 0; i < poss; ++i ) {
-        printf( "            move %d: (%d, %d)\n", ( i + 1 ), moveTo[i]._x, 
+        printf( "            move %d: (%d, %d)\n", ( i + 1 ), moveTo[i]._x,
                 moveTo[i]._y );
     }
 #endif
@@ -204,7 +200,7 @@ void tour( Board * b ) {
     if ( poss > 0 ) {
         if ( poss > 1 ) {
             printf( "PID %d: Multiple moves possible after move #%d\n",
-                        getpid(), tmp._moves );
+                    getpid(), tmp._moves );
 #ifdef DISPLAY_BOARD
             printBoard( getpid(), tmp );
 #endif
@@ -294,7 +290,7 @@ int main( int argc, char * argv[] ) {
             /* Touring simulation. */
             pid_t pid = getpid();
             printf( "PID %d: Solving the knight's tour problem for a %dx%d board.\n",
-                        pid, touring._cols, touring._rows );
+                    pid, touring._cols, touring._rows );
 
             tour( &touring );
 
