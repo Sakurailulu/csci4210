@@ -31,8 +31,9 @@ typedef struct {
     int _count;
 } Word;
 
-const int SCALE = 32;               /* Starting size and incrementing factor for STORE. */
-const int SIZEOF = sizeof( Word );  /* Size of struct Word to save function calls. */
+#define SCALE 32                    /* Incrementing factor for STORE. */
+#define SIZEOF sizeof( Word )       /* Size of struct Word. */
+
 Word * STORE;                       /* Word struct array for storage. */
 
 
