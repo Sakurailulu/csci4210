@@ -187,7 +187,9 @@ int tour( Board * b ) {
                 fprintf( stderr, "ERROR: fork() failed." );
                 abort();
             } else if ( pids[i] == 0 ) {
-                tmp._grid[ moveTo[i]._y ][ moveTo[i]._x ] = 'k';
+                tmp._curr._x = moveTo[i]._x;
+                tmp._curr._y = moveTo[i]._y;
+                tmp._grid[ tmp._curr._y ][ tmp._curr._x ] = 'k';
                 tour( &tmp );
             } else {
                 exit( 0 );
