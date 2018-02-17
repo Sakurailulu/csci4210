@@ -44,7 +44,7 @@ typedef struct {
 /* Initial method declarations. */
 void printBoard( pid_t pid, Board b );
 int findPossMoves( Board b, Pair * moveTo );
-void tour( Board * b );
+int tour( Board * b );
 
 /* Constant array with all possible movements. */
 const Pair moves[8] = { (Pair){ ._x = +1, ._y = -2 },   /* up, then right */
@@ -98,18 +98,17 @@ int findPossMoves( Board b, Pair * moveTo ) {
  * @modifies    b
  * @effects     marks spots visited by changing from '.' to 'k'.
  */
-void tour( Board * b ) {
+int tour( Board * b ) {
 #ifdef DEBUG_MODE
     printf( "    %d touring...\n", getpid() );
 #endif
 
     Board tmp = *b;
 
+    /* Count number of valid next moves. */
     Pair * moveTo = calloc( 8, sizeof( Pair ) ); 
-    printf( "here\n" );
     int poss = findPossMoves( tmp, moveTo );
-    printf( "here\n" );
-    //moveTo = realloc( moveTo, ( poss * sizeof( Pair ) ) );
+    moveTo = realloc( moveTo, ( poss * sizeof( Pair ) ) );
 #ifdef DEBUG_MODE
     printf( "        poss = %d\n", poss );
     for ( int i = 0; i < poss; ++i ) {
@@ -128,14 +127,24 @@ void tour( Board * b ) {
 
             pid_t pids[poss];
             for ( int i = 0; i < poss; ++i ) {
+                /* Initialize pipe. */
+                int p[2], rc;
+                if ( ( rc = pipe( p ) ) < 0 ) {
+                    fprintf( stderr, "ERROR: pipe() failed.\n" );
+                    return EXIT_FAILURE;
+                }
+
                 if ( ( pids[i] = fork() ) < 0 ) {
                     fprintf( stderr, "ERROR: fork() failed.\n" );
+                    return EXIT_FAILURE;
                 } else if ( pids[i] == 0 ) {
                     tmp._curr = moveTo[i];
                     tmp._grid[tmp._curr._y][tmp._curr._x] = 'k';
                     ++tmp._moves;
+                    printBoard( getpid(), tmp );
                     tour( &tmp );
 
+                    /* Freeing memory that will get lost in children. */
                     free( moveTo );
                     for ( int j = 0; j < (*b)._rows; ++j ) {
                         free( (*b)._grid[j] );
@@ -144,25 +153,28 @@ void tour( Board * b ) {
                     exit( 0 );
                 }
             }
-            pid_t pid;
+            // pid_t pid;
+            int status;
             while ( poss > 0 ) {
-                pid = wait( NULL );
-                printf( "Child with PID %d exited.\n", pid );
+                wait( &status );
                 --poss;
             }
         } else {
-            printf( "here\n" );
+            /* poss <= 1 */
             tmp._curr = moveTo[0];
+            printf("%d,%d\n",tmp._curr._x,tmp._curr._y);
             tmp._grid[tmp._curr._y][tmp._curr._x] = 'k';
             ++tmp._moves;
             tour( &tmp );
         }
     } else {
+        /* poss <= 0 */
         printf( "PID %d: Dead end after move #%d\n", getpid(), tmp._moves );
     }
 
     free( moveTo );
     b = &tmp;
+    return EXIT_SUCCESS;
 }
 
 
@@ -226,7 +238,15 @@ int main( int argc, char * argv[] ) {
             printf( "PID %d: Solving the knight's tour problem for a %dx%d board.\n",
                     pid, touring._cols, touring._rows );
 
-            tour( &touring );
+            int rc = tour( &touring );
+            if ( !rc ) {
+                /* EXIT_SUCCESS */
+                printf( "PID %d: Best solution found visits %d squares (out of %d)\n",
+                        getpid(), touring._moves, ( touring._rows * touring._cols ) );
+            } else {
+                /* EXIT_FAILURE */
+                fprintf( stderr, "ERROR: knight's tour failed.\n" );
+            }
 
             /* Freeing allocated memory in board. */
 #ifdef DEBUG_MODE
@@ -237,7 +257,7 @@ int main( int argc, char * argv[] ) {
                 free( touring._grid[i] );       touring._grid[i] = NULL;
             }
             free( touring._grid );              touring._grid = NULL;
-            return EXIT_SUCCESS;
+            return rc;
         } else {
             /* ( m <= 2 ) && ( n <= 2 ) */
             fprintf( stderr, "ERROR: Invalid argument(s)\n" );
