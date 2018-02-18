@@ -64,7 +64,7 @@ const Pair moves[8] = { (Pair){ ._x = +1, ._y = -2 },   /* up, then right */
  */
 void printBoard( pid_t pid, Board b ) {
     for ( int i = 0; i < b._rows; ++i ) {
-        printf( "PID %d:   %s\n", pid, b._grid[i] );
+        printf( "PID %d:  %s\n", pid, b._grid[i] );
     }
 }
 
@@ -80,8 +80,8 @@ int findPossMoves( Board b, Pair * moveTo ) {
     int numPoss = 0;
     for ( int i = 0; i < 8; ++i ) {
         int tmpX = b._curr._x + moves[i]._x, tmpY = b._curr._y + moves[i]._y;
-        if ( ( ( 0 <= tmpX ) && ( tmpX <= b._cols ) ) &&
-                ( ( 0 <= tmpY ) && ( tmpY <= b._rows ) ) &&
+        if ( ( ( 0 <= tmpX ) && ( tmpX < b._cols ) ) &&
+                ( ( 0 <= tmpY ) && ( tmpY < b._rows ) ) &&
                 ( b._grid[tmpY][tmpX] != 'k' ) ) {
             moveTo[numPoss] = (Pair){ ._x = tmpX, ._y = tmpY };
             ++numPoss;
@@ -106,7 +106,7 @@ int tour( Board * b ) {
     Board tmp = *b;
 
     /* Count number of valid next moves. */
-    Pair * moveTo = calloc( 8, sizeof( Pair ) ); 
+    Pair * moveTo = calloc( 8, sizeof( Pair ) );
     int poss = findPossMoves( tmp, moveTo );
     moveTo = realloc( moveTo, ( poss * sizeof( Pair ) ) );
 #ifdef DEBUG_MODE
@@ -126,6 +126,7 @@ int tour( Board * b ) {
 #endif
 
             pid_t pids[poss];
+            int * numMoves = calloc( poss, sizeof( int ) );
             for ( int i = 0; i < poss; ++i ) {
                 /* Initialize pipe. */
                 int p[2], rc;
@@ -134,35 +135,62 @@ int tour( Board * b ) {
                     return EXIT_FAILURE;
                 }
 
+                /* Fork to all children processes. */
                 if ( ( pids[i] = fork() ) < 0 ) {
                     fprintf( stderr, "ERROR: fork() failed.\n" );
                     return EXIT_FAILURE;
-                } else if ( pids[i] == 0 ) {
+                } else if ( pids[i] == 0 ) {    /* CHILD */
                     tmp._curr = moveTo[i];
                     tmp._grid[tmp._curr._y][tmp._curr._x] = 'k';
                     ++tmp._moves;
-                    printBoard( getpid(), tmp );
+
+                    close( p[0] );              p[0] = -1;
+                    int bytesWritten = write( p[1], &tmp._moves,
+                            sizeof( int ) );
+                    if ( bytesWritten == -1 ) {
+                        fprintf( stderr, "ERROR: write() failed.\n" );.
+                        return EXIT_FAILURE;
+                    } else {
+                        printf( "PID %d: Sending %d on pipe to parent pid %d\n",
+                                getpid(), tmp._moves, getppid() );
+                    }
+
                     tour( &tmp );
 
                     /* Freeing memory that will get lost in children. */
+                    free( numMoves );
                     free( moveTo );
                     for ( int j = 0; j < (*b)._rows; ++j ) {
                         free( (*b)._grid[j] );
                     }
                     free( (*b)._grid );
-                    exit( 0 );
+                    exit( EXIT_SUCCESS );
+                } else {                        /* PARENT */
+                    close( p[1] );              p[1] = -1;
+                    int bytesRead = read( p[0], &numMoves[i], sizeof( int ) );
+                    if ( bytesRead == -1 ) {
+                        fprintf( stderr, "ERROR: read() failed.\n" );
+                        return EXIT_FAILURE;
+                    } else {
+                        printf( "PID %d: Received %d from child pid %d\n",
+                                getpid(), numMoves[i], pids[i] );
+                    }
                 }
             }
-            // pid_t pid;
-            int status;
             while ( poss > 0 ) {
-                wait( &status );
+#ifdef NO_PARALLEL
+                wait( NULL );
+#endif
+
+                if ( numMoves[poss - 1] > tmp._moves ) {
+                    tmp._moves = numMoves[poss - 1];
+                }
                 --poss;
             }
+            free( numMoves );
         } else {
             /* poss <= 1 */
             tmp._curr = moveTo[0];
-            printf("%d,%d\n",tmp._curr._x,tmp._curr._y);
             tmp._grid[tmp._curr._y][tmp._curr._x] = 'k';
             ++tmp._moves;
             tour( &tmp );
@@ -170,6 +198,10 @@ int tour( Board * b ) {
     } else {
         /* poss <= 0 */
         printf( "PID %d: Dead end after move #%d\n", getpid(), tmp._moves );
+
+#ifdef DISPLAY_BOARD
+        printBoard( getpid(), tmp );
+#endif
     }
 
     free( moveTo );
