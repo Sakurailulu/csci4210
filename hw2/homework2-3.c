@@ -11,6 +11,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/wait.h>
 #include <unistd.h>
 
 
@@ -45,7 +46,7 @@ int max( int l, int r );
 void printBoard( pid_t pid, Board b );
 int findPoss( Pair * moves, Board b );
 void step( Pair move, Board * b );
-void tour( Board * b );
+int tour( Board * b );
 
 
 /* -------------------------------------------------------------------------- */
@@ -93,7 +94,7 @@ int findPoss( Pair * moves, Board b ) {
             ++poss;
 
 #ifdef DEBUG_MODE
-            printf( "  possible move %d -> (%d, %d)", poss, move._x, move._y );
+            printf( "  poss. move %d -> (%d, %d)\n", poss, move._x, move._y );
 #endif
         }
     }
@@ -120,17 +121,17 @@ void step( Pair move, Board * b ) {
  * @modifies    b
  * @effects     adds effects of tour to board.
  */
-void tour( Board * b ) {
+int tour( Board * b ) {
     Board tmp = *b;
 
     /* Find valid moves from _curr. */
     Pair * moves = calloc( 8, PAIR_SIZE );
     int poss = findPoss( moves, tmp );
+    int p[poss][2];
 
-    int i = 0, max = 0;
+    int i = 0, most = 0;
     if ( poss >= 1 ) {
         if ( poss > 1 ) {
-            int p[poss][2];
             for ( int j = 0; j < poss; ++j ) {
                 int rc = pipe( p[j] );
                 if ( rc < 0 ) {
@@ -167,16 +168,18 @@ void tour( Board * b ) {
             }
 
             pid_t wPid;
+            i = 0;
             while ( ( wPid = wait( &wPid ) ) > 0 ) {
                 int tmp = 0;
 
                 close( p[i][1] );                          p[i][1] = -1;
-                int read = read( p[i][0], &tmp, sizeof( int ) );
-                if ( read < 0 ) {
+                int bytesRead = read( p[i][0], &tmp, sizeof( int ) );
+                if ( bytesRead < 0 ) {
                     fprintf( stderr, "ERROR: read() %d failed.\n", ( i + 1 ) );
                     exit( EXIT_FAILURE );
                 }
-                max = max( max, tmp );
+                most = max( most, (int)tmp );
+                ++i;
             }
         } else {
             /* poss == 1 :: don't fork */
@@ -192,23 +195,23 @@ void tour( Board * b ) {
 #endif
 
         close( p[i][0] );                          p[i][0] = -1;
-        int write = write( p[i][1], &tmp._moves, sizeof( int ) );
-        if ( write < 0 ) {
+        int bytesWrite = write( p[i][1], &tmp._moves, sizeof( int ) );
+        if ( bytesWrite < 0 ) {
             fprintf( stderr, "ERROR: write() %d failed.\n", ( i + 1 ) );
             exit( EXIT_FAILURE );
         }
-        printf( "PID %d: Sending %d on pipe to parent pid %n", getpid(),
+        printf( "PID %d: Sending %d on pipe to parent pid %d\n", getpid(),
                 tmp._moves, getppid() );
     }
 
     b = &tmp;
-    return max;
+    return most;
 }
 
 
 /* -------------------------------------------------------------------------- */
 
-int main( int argc, char * argv ) {
+int main( int argc, char * argv[] ) {
     setbuf( stdout, NULL );                     /* Don't buffer stdout. */
 
     if ( argc == 3 ) {
@@ -249,7 +252,7 @@ int main( int argc, char * argv ) {
 #ifdef DEBUG_MODE
             printf( "    Board details:\n" );
             printf( "    _x = %d, _y = %d, _moves = %d\n", init._cols,
-                        init._rows, touring._moves );
+                        init._rows, init._moves );
             printf( "    _curr = (%d, %d)\n", init._curr._x, init._curr._y );
 #endif
 
@@ -260,22 +263,22 @@ int main( int argc, char * argv ) {
 
             int max = tour( &init );
             if ( max >= 0 ) {
-                printf( "PID %d: Best solution found visits %d squares (out of %d)",
+                printf( "PID %d: Best solution found visits %d squares (out of %d)\n",
                         getpid(), max, ( init._rows * init._cols ) );
 
-                for ( int i = 0; i < touring._rows; ++i ) {
-                    free( touring._grid[i] );       touring._grid[i] = NULL;
+                for ( int i = 0; i < init._rows; ++i ) {
+                    free( init._grid[i] );          init._grid[i] = NULL;
                 }
-                free( touring._grid );              touring._grid = NULL;
+                free( init._grid );              init._grid = NULL;
                 return EXIT_SUCCESS;
             } else {
                 /* max < 0 :: tour() returned an error */
                 fprintf( stderr, "ERROR: knight's tour failed\n" );
 
-                for ( int i = 0; i < touring._rows; ++i ) {
-                    free( touring._grid[i] );       touring._grid[i] = NULL;
+                for ( int i = 0; i < init._rows; ++i ) {
+                    free( init._grid[i] );          init._grid[i] = NULL;
                 }
-                free( touring._grid );              touring._grid = NULL;
+                free( init._grid );              init._grid = NULL;
                 return EXIT_FAILURE;
             }
         } else {
