@@ -61,6 +61,19 @@ int max( int l, int r ) {
 }
 
 
+/* Free board memory helper method.
+ * @param       b, Board pointer to free.
+ * @modifies    b
+ * @effects     frees entire grid.
+ */
+void freeBoard( Board * b ) {
+    for ( int i = 0; i < (*b)._rows; ++i ) {
+        free( (*b)._grid[i] ); (*b)._grid[i] = NULL;
+    }
+    free( (*b)._grid ); (*b)._grid = NULL;
+}
+
+
 /* Board printing helper method.
  * @param       pid, pid value passed for DISPLAY_BOARD output.
  *              b, Board to print.
@@ -157,14 +170,11 @@ int tour( Board * b ) {
                 } else if ( pids[i] == 0 ) {
                     step( moves[i], &tmp );
                     tour( &tmp );
-
-                    free( moves );              moves = NULL;
-                    for ( int j = 0; j < (*b)._rows; ++j ) {
-                        free( (*b)._grid[j] );  (*b)._grid[j] = NULL;
-                    }
-                    free( (*b)._grid );         (*b)._grid = NULL;
-                    exit( EXIT_SUCCESS );
                 }
+
+#ifdef NO_PARALLEL
+                wait( NULL );
+#endif
             }
 
             pid_t wPid;
@@ -194,14 +204,27 @@ int tour( Board * b ) {
         printBoard( getpid(), tmp );
 #endif
 
-        close( p[i][0] );                          p[i][0] = -1;
+        close( p[i][0] );                       p[i][0] = -1;
         int bytesWrite = write( p[i][1], &tmp._moves, sizeof( int ) );
         if ( bytesWrite < 0 ) {
             fprintf( stderr, "ERROR: write() %d failed.\n", ( i + 1 ) );
+            // free( moves );                          moves = NULL;
+            // freeBoard( b );
+            /* for ( int j = 0; j < (*b)._rows; ++j ) {
+                free( (*b)._grid[j] );              (*b)._grid[j] = NULL;
+            }
+            free( (*b)._grid );                     (*b)._grid = NULL; */
             exit( EXIT_FAILURE );
         }
         printf( "PID %d: Sending %d on pipe to parent pid %d\n", getpid(),
                 tmp._moves, getppid() );
+
+        free( moves );                          moves = NULL;
+        for ( int j = 0; j < (*b)._rows; ++j ) {
+            free( (*b)._grid[j] );              (*b)._grid[j] = NULL;
+        }
+        free( (*b)._grid );                     (*b)._grid = NULL;
+        exit( EXIT_SUCCESS );
     }
 
     b = &tmp;
