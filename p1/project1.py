@@ -14,4 +14,4 @@ def read_file():
 if ( __name__ == "__main__" ):
     print( "Hello, pedrothepepper!" )
     print( "It's me, melnig." )
-	print( "Hi, melnig." )
+    print( "Hi, melnig." )
