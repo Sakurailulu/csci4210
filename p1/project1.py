@@ -1,6 +1,7 @@
 '''
     project1.py
     Griffin Melnick, melnig@rpi.edu
+    Peter Straub, straup@rpi.edu
 
     CPU process scheduling simulation built with three scheduling algorithms:
     (1) first come, first served [FCFS]; (2) shortest remaining time [SRT]; (3)
