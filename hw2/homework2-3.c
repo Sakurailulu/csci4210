@@ -205,6 +205,7 @@ int tour( Board * b ) {
 #endif
 
         close( p[i][0] );                       p[i][0] = -1;
+        printf( "moves = %d\n", tmp._moves );
         int bytesWrite = write( p[i][1], &tmp._moves, sizeof( int ) );
         if ( bytesWrite < 0 ) {
             fprintf( stderr, "ERROR: write() %d failed.\n", ( i + 1 ) );

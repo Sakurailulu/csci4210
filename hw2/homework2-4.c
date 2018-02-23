@@ -186,7 +186,7 @@ void step( Board * b, Pair move ) {
  * @effects     performs knight's tour.
  */
 int tour( Board * b ) {
-    int poss = 0, sol = 0, i;
+    int poss = 0, i;
     Board tmp = *b;
     Pair * moves = calloc( 8, PAIR_SIZE );
 
@@ -200,9 +200,18 @@ int tour( Board * b ) {
             printBoard( tmp, getpid(), false );
 #endif
 
-            //pid_t pids[poss];
+            pid_t pids[poss];
             for ( i = 0; i < poss; ++i ) {
-                
+                pids[i] = fork();
+                if ( pids[i] < 0 ) {
+                    fprintf( stderr, "ERROR: fork() %d failed\n", ( i + 1 ) );
+                    if ( pids[i] != PARENT ) { exit( EXIT_FAILURE ); }
+                    else { return EXIT_FAILURE; }
+                } else if ( pids[i] == 0 ) {
+                    step( &tmp, moves[i] );
+                    tour( &tmp );
+                }
+
 #ifdef NO_PARALLEL
                 wait( NULL );
 #endif
@@ -218,14 +227,11 @@ int tour( Board * b ) {
 #ifdef DISPLAY_BOARD
         printBoard( tmp, getpid(), false );
 #endif
-
-        //close( pipes[i][0] );                   pipes[i][0] = -1;
-        //int written = write( pipes[i][0], &sol, sizeof( int ) );
     }
 
     free( moves );
     b = &tmp;
-    return sol;
+    return EXIT_SUCCESS;
 }
 
 
@@ -233,8 +239,6 @@ int tour( Board * b ) {
 
 int main( int argc, char * argv[] ) {
     setbuf( stdout, NULL );
-
-    printf( "%s\n", ( ( PARENT == getpid() ) ? "true" : "false" ) );
 
 #ifndef TEST
 
@@ -278,20 +282,26 @@ int main( int argc, char * argv[] ) {
                     toTour._rows, toTour._moves );
             printf( "_curr = (%d, %d)\n", toTour._curr._x, toTour._curr._y );
             printf( "_grid =\n" );
-            printBoard( toTour, getpid(), true );
+            printBoard( toTour, PARENT, true );
             printf( "\n" );
 #endif
         
             /* Touring simulation. */
             printf( "PID %d: Solving the knight's tour problem for a %dx%d board.\n", 
-                    getpid(), toTour._cols, toTour._rows );
+                    PARENT, toTour._cols, toTour._rows );
             
-            int max = tour( &toTour );
-            printf( "PID %d: Best solution found visits %d squares (out of %d)\n",
-                        getpid(), max, ( toTour._cols * toTour._rows ) );
+            int status = tour( &toTour );
+            if ( !status ) {
+                printf( "PID %d: Best solution found visits %d squares (out of %d)\n",
+                        PARENT, toTour._moves, (toTour._cols * toTour._rows) );
 
-            freeBoard( &toTour );
-            return EXIT_SUCCESS;
+                freeBoard( &toTour );
+                return EXIT_SUCCESS;
+            } else {
+                fprintf( stderr, "ERROR: knight's tour failed\n" );
+                freeBoard( &toTour );
+                return EXIT_FAILURE;
+            }
         } else {
             /* ( m <= 2 ) || ( n <= 2 ) :: invalid argument values */
             fprintf( stderr, "ERROR: Invalid argument(s)\n" );
