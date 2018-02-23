@@ -20,6 +20,7 @@
 
 from __future__ import print_function
 from collections import defaultdict as d_dict
+from collections import OrderedDict as o_dict
 import os
 import sys
 
@@ -28,7 +29,6 @@ RR_ADD = False
 
 # Used to print debugging output. #
 DEBUG = False
-# DEBUG = True
 
 
 # ---------------------------------------------------------------------------- #
@@ -78,7 +78,19 @@ Simulator for FCFS algorithm.
 :return:    5-tuple of simulation results.
 '''
 def fcfs( procs ):
+    if DEBUG:
+        print( "\nFCFS" )
     res = tuple()
+
+    comp = lambda item: item[1][0]
+    ordered = o_dict()
+    for pair in sorted( procs.items(), key = comp ):
+        ordered[ pair[0] ] = pair[1]
+
+    if DEBUG:
+        for key, val in ordered.items():
+            print( "  {} -> {}".format(key, val) )
+
     return res
 
 
@@ -88,6 +100,8 @@ Simulator for SRT algorithm.
 :return:    5-tuple of simulation results.
 '''
 def srt( procs ):
+    if DEBUG:
+        print( "\nSRT" )
     res = tuple()
     return res
 
@@ -99,6 +113,8 @@ Simulator for RR algorithm.
 :return:    5-tuple of simulation results.
 '''
 def rr( procs, add=False ):
+    if DEBUG:
+        print( "\nRR" )
     res = tuple()
     return res
 
@@ -133,4 +149,4 @@ if ( __name__ == "__main__" ):
         # ( len( sys.argv ) != 3 ) and ( len( sys.argv ) != 4 ) #
         err( "ERROR: Invalid arguments" )
         err( "USAGE: ./a.out <input-file> <stats-output-file> [<rr-add>]" )
-
+        sys.exit()
