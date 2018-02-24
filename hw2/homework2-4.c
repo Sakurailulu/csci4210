@@ -1,15 +1,15 @@
 /* homework2.c
  * Griffin Melnick, melnig@rpi.edu
  *
- * Find the solution to the knight's tour problem for a board with given 
- * dimensions. Take an m x n grid and, starting from the top left corner of the 
- * grid, use forking to generate all possible children processes and pipe the 
- * best solution back to the parent. Ideally, we find the maximum number of 
+ * Find the solution to the knight's tour problem for a board with given
+ * dimensions. Take an m x n grid and, starting from the top left corner of the
+ * grid, use forking to generate all possible children processes and pipe the
+ * best solution back to the parent. Ideally, we find the maximum number of
  * moves that a knight can take in a single board. This is called via:
  *
  *   bash$ ./a.out <m> <n>
  *
- * Where both *m* and *n* are greater than two. Otherwise an error is given and 
+ * Where both *m* and *n* are greater than two. Otherwise an error is given and
  * the program fails.
  *
  * Possible additional compiling flags are:
@@ -60,53 +60,6 @@ int tour( Board * b );
 
 /* -------------------------------------------------------------------------- */
 
-#ifdef TEST
-
-#include <assert.h>
-
-bool testMax() {
-    bool passed = false;
-    passed = ( 12 != max( 12, 13 ) );
-    passed = ( 13 == max( 12, 13 ) );
-    passed = ( 12 == max( 12, 12 ) );
-    passed = ( 13 != max( 12, 11 ) );
-    return passed;
-}
-    
-    
-bool testFindPoss() {
-    bool passed = false;
-    return passed;
-}
-    
-    
-bool testStep() {
-    bool passed = false;
-    return passed;
-}
-    
-    
-bool testTour() {
-    bool passed = false;
-    return passed;
-}
-
-
-void testAll() {
-    printf( "testing max()...\n" );
-    assert( testMax() );
-    // printf( "testing findPoss()...\n" );
-    // assert( testFindPoss() );
-    // printf( "testing step()...\n" );
-    // assert( testStep() );
-    // printf( "testing tour()...\n" );
-    // assert( testTour() );
-}
-
-#endif
-
-/* -------------------------------------------------------------------------- */
-
 /* Board freeing helper method.
  * @param       b, pointer to Board to be freed.
  * @modifies    b
@@ -153,10 +106,10 @@ int max( int l, int r ) {
 int findPoss( Board b, Pair * moves ) {
     int poss = 0;
     for ( int i = 0; i < 8; ++i ) {
-        Pair tmp = (Pair){ ._x = ( b._curr._x + all[i]._x ), 
+        Pair tmp = (Pair){ ._x = ( b._curr._x + all[i]._x ),
                            ._y = ( b._curr._y + all[i]._y ) };
-        if ( ( ( 0 <= tmp._y ) && ( tmp._y < b._rows ) ) && 
-                ( ( 0 <= tmp._x ) && ( tmp._x < b._cols ) ) && 
+        if ( ( ( 0 <= tmp._y ) && ( tmp._y < b._rows ) ) &&
+                ( ( 0 <= tmp._x ) && ( tmp._x < b._cols ) ) &&
                 ( b._grid[tmp._y][tmp._x] != 'k' ) ) {
             moves[i] = tmp;
             ++poss;
@@ -181,32 +134,43 @@ void step( Board * b, Pair move ) {
 
 /* Touring method.
  * @param       b, Board to tour.
- * @return      best solution if found without error, -1 otherwise.
+ * @return      EXIT_SUCCESS if a solution is found, EXIT_FAILURE if an error
+                    occurs.
  * @modifies    b
  * @effects     performs knight's tour.
  */
 int tour( Board * b ) {
-    int poss = 0, i;
+    int poss = 0, i = 0;
     Board tmp = *b;
     Pair * moves = calloc( 8, PAIR_SIZE );
 
     poss = findPoss( tmp, moves );
-    //int pipes[poss][2];
+    int pipes[poss][2];
+    pid_t pids[poss];
+
+    /* Pipe initialization. */
+    for ( int j = 0; j < poss; ++j ) {
+        int rc = pipe( pipes[j] );
+        if ( rc < 0 ) {
+            fprintf( stderr, "ERROR: pipe() %d failed\n", j );
+            if ( getpid() != PARENT ) { exit( EXIT_FAILURE ); }
+            else { return EXIT_FAILURE; }
+        }
+    }
+
     if ( poss >= 1 ) {
         if ( poss > 1 ) {
-            printf( "PID %d: %d moves possible after move #%d\n", getpid(), 
+            printf( "PID %d: %d moves possible after move #%d\n", getpid(),
                     poss, tmp._moves );
 #ifdef DISPLAY_BOARD
             printBoard( tmp, getpid(), false );
 #endif
 
-            pid_t pids[poss];
             for ( i = 0; i < poss; ++i ) {
                 pids[i] = fork();
                 if ( pids[i] < 0 ) {
                     fprintf( stderr, "ERROR: fork() %d failed\n", ( i + 1 ) );
-                    if ( pids[i] != PARENT ) { exit( EXIT_FAILURE ); }
-                    else { return EXIT_FAILURE; }
+                    exit( EXIT_FAILURE );
                 } else if ( pids[i] == 0 ) {
                     step( &tmp, moves[i] );
                     tour( &tmp );
@@ -227,9 +191,26 @@ int tour( Board * b ) {
 #ifdef DISPLAY_BOARD
         printBoard( tmp, getpid(), false );
 #endif
+
+        close( pipes[i][0] );                   pipes[i][0] = -1;
+        int written = write( pipes[i][1], &tmp._moves, sizeof( int ) );
+        if ( written < 0 ) {
+            fprintf( stderr, "ERROR: write() %d failed\n", ( i + 1 ) );
+            free( moves );                      moves = NULL;
+            freeBoard( b );
+            if ( getpid() != PARENT ) { exit( EXIT_FAILURE ); }
+            else { return EXIT_FAILURE; }
+        } else {
+            printf( "PID %d: Sending %d on pipe to parent", getpid(),
+                    tmp._moves );
+            free( moves );                      moves = NULL;
+            freeBoard( b );
+            if ( getpid() != PARENT ) { exit( EXIT_SUCCESS ); }
+            else { return EXIT_SUCCESS; }
+        }
     }
 
-    free( moves );
+    free( moves );                              moves = NULL;
     b = &tmp;
     return EXIT_SUCCESS;
 }
@@ -239,9 +220,6 @@ int tour( Board * b ) {
 
 int main( int argc, char * argv[] ) {
     setbuf( stdout, NULL );
-
-#ifndef TEST
-
     if ( argc == 3 ) {
         char * tmp;
         int m = strtol( argv[1], &tmp, 10 ), n = strtol( argv[2], &tmp, 10 );
@@ -250,18 +228,18 @@ int main( int argc, char * argv[] ) {
             /** Static assignments. */
             Board toTour = (Board){ ._cols = m, ._rows = n, ._moves = 1,
                                     ._curr = (Pair){ ._x = 0, ._y = 0 } };
-            
+
             /** Memory allocation. */
             toTour._grid = calloc( toTour._rows, sizeof( char* ) );
             if ( toTour._grid == NULL ) {
-                fprintf( stderr, "ERROR: first calloc() failed.\n" );
+                fprintf( stderr, "ERROR: first calloc() failed\n" );
                 return EXIT_FAILURE;
             } else {
                 int boardWidth = toTour._cols + 1;
                 for ( int i = 0; i < toTour._rows; ++i ) {
                     toTour._grid[i] = calloc( boardWidth, sizeof( char ) );
                     if ( toTour._grid[i] == NULL ) {
-                        fprintf( stderr, "ERROR: second calloc() failed.\n" );
+                        fprintf( stderr, "ERROR: second calloc() failed\n" );
                         return EXIT_FAILURE;
                     }
                 }
@@ -278,22 +256,22 @@ int main( int argc, char * argv[] ) {
 
 #ifdef DEBUG_MODE
             printf( "Initial board details:\n" );
-            printf( "_cols = %d, _rows = %d, _moves = %d\n", toTour._cols, 
+            printf( "_cols = %d, _rows = %d, _moves = %d\n", toTour._cols,
                     toTour._rows, toTour._moves );
             printf( "_curr = (%d, %d)\n", toTour._curr._x, toTour._curr._y );
             printf( "_grid =\n" );
-            printBoard( toTour, PARENT, true );
+            printBoard( toTour, getpid(), true );
             printf( "\n" );
 #endif
-        
+
             /* Touring simulation. */
-            printf( "PID %d: Solving the knight's tour problem for a %dx%d board.\n", 
-                    PARENT, toTour._cols, toTour._rows );
-            
+            printf( "PID %d: Solving the knight's tour problem for a %dx%d board.\n",
+                    getpid(), toTour._cols, toTour._rows );
+
             int status = tour( &toTour );
             if ( !status ) {
                 printf( "PID %d: Best solution found visits %d squares (out of %d)\n",
-                        PARENT, toTour._moves, (toTour._cols * toTour._rows) );
+                        getpid(), toTour._moves, (toTour._cols * toTour._rows) );
 
                 freeBoard( &toTour );
                 return EXIT_SUCCESS;
@@ -314,14 +292,4 @@ int main( int argc, char * argv[] ) {
         fprintf( stderr, "USAGE: a.out <m> <n>\n" );
         return EXIT_FAILURE;
     }
-
-#endif
-
-
-#ifdef TEST
-    /* test methods */
-    testAll();
-    printf( "All methods work as expected.\n" );
-#endif
 }
-

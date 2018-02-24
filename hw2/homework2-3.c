@@ -68,9 +68,9 @@ int max( int l, int r ) {
  */
 void freeBoard( Board * b ) {
     for ( int i = 0; i < (*b)._rows; ++i ) {
-        free( (*b)._grid[i] ); (*b)._grid[i] = NULL;
+        free( (*b)._grid[i] );                  (*b)._grid[i] = NULL;
     }
-    free( (*b)._grid ); (*b)._grid = NULL;
+    free( (*b)._grid );                         (*b)._grid = NULL;
 }
 
 
@@ -140,27 +140,27 @@ int tour( Board * b ) {
     /* Find valid moves from _curr. */
     Pair * moves = calloc( 8, PAIR_SIZE );
     int poss = findPoss( moves, tmp );
+
+    pid_t pids[poss];
     int p[poss][2];
+    for ( int j = 0; j < poss; ++j ) {
+        int rc = pipe( p[j] );
+        if ( rc < 0 ) {
+            fprintf( stderr, "ERROR: pipe() %d failed.\n", ( j + 1 ) );
+            exit( EXIT_FAILURE );
+        }
+    }
 
     int i = 0, most = 0;
     if ( poss >= 1 ) {
         if ( poss > 1 ) {
-            for ( int j = 0; j < poss; ++j ) {
-                int rc = pipe( p[j] );
-                if ( rc < 0 ) {
-                    fprintf( stderr, "ERROR: pipe() %d failed.\n", ( j + 1 ) );
-                    exit( EXIT_FAILURE );
-                }
-            }
-
-            printf( "PID %d: Multiple moves possible after move #%d\n",
-                    getpid(), tmp._moves );
+            printf( "PID %d: %d moves possible after move #%d\n", getpid(),
+                    poss, tmp._moves );
 
 #ifdef DISPLAY_BOARD
                     printBoard( getpid(), tmp );
 #endif
 
-            pid_t pids[poss];
             for ( i = 0; i < poss; ++i ) {
 
                 pids[i] = fork();
@@ -205,12 +205,11 @@ int tour( Board * b ) {
 #endif
 
         close( p[i][0] );                       p[i][0] = -1;
-        printf( "moves = %d\n", tmp._moves );
         int bytesWrite = write( p[i][1], &tmp._moves, sizeof( int ) );
         if ( bytesWrite < 0 ) {
             fprintf( stderr, "ERROR: write() %d failed.\n", ( i + 1 ) );
-            // free( moves );                          moves = NULL;
-            // freeBoard( b );
+            free( moves );                      moves = NULL;
+            freeBoard( b );
             /* for ( int j = 0; j < (*b)._rows; ++j ) {
                 free( (*b)._grid[j] );              (*b)._grid[j] = NULL;
             }
@@ -221,10 +220,11 @@ int tour( Board * b ) {
                 tmp._moves, getppid() );
 
         free( moves );                          moves = NULL;
-        for ( int j = 0; j < (*b)._rows; ++j ) {
+        freeBoard( b );
+        /* for ( int j = 0; j < (*b)._rows; ++j ) {
             free( (*b)._grid[j] );              (*b)._grid[j] = NULL;
         }
-        free( (*b)._grid );                     (*b)._grid = NULL;
+        free( (*b)._grid );                     (*b)._grid = NULL; */
         exit( EXIT_SUCCESS );
     }
 
@@ -285,26 +285,23 @@ int main( int argc, char * argv[] ) {
             printf( "PID %d: Solving the knight's tour problem for a %dx%d board.\n",
                     pid, init._cols, init._rows );
 
-            int max = tour( &init );
-            if ( max >= 0 ) {
-                printf( "PID %d: Best solution found visits %d squares (out of %d)\n",
-                        getpid(), max, ( init._rows * init._cols ) );
+            tour( &init );
+            printf( "PID %d: Best solution found visits %d squares (out of %d)\n",
+                    pid, init._moves, ( init._rows * init._cols ) );
 
-                for ( int i = 0; i < init._rows; ++i ) {
-                    free( init._grid[i] );          init._grid[i] = NULL;
-                }
-                free( init._grid );              init._grid = NULL;
-                return EXIT_SUCCESS;
-            } else {
-                /* max < 0 :: tour() returned an error */
-                fprintf( stderr, "ERROR: knight's tour failed\n" );
+            freeBoard( &init );
+            return EXIT_SUCCESS;
 
-                for ( int i = 0; i < init._rows; ++i ) {
-                    free( init._grid[i] );          init._grid[i] = NULL;
-                }
-                free( init._grid );              init._grid = NULL;
-                return EXIT_FAILURE;
+            /* max < 0 :: tour() returned an error
+            fprintf( stderr, "ERROR: knight's tour failed\n" );
+
+            freeBoard( &init );
+            for ( int i = 0; i < init._rows; ++i ) {
+                free( init._grid[i] );          init._grid[i] = NULL;
             }
+            free( init._grid );              init._grid = NULL;
+            return EXIT_FAILURE;
+        } */
         } else {
             /* ( m <= 2 ) || ( n <= 2 ) :: invalid values */
             fprintf( stderr, "ERROR: Invalid argument(s)\n" );

@@ -1,4 +1,4 @@
-'''
+"""
     project1.py
     Griffin Melnick, melnig@rpi.edu
     Peter Straub, straup@rpi.edu
@@ -16,7 +16,7 @@
     <stats-output-file> is the name of the file to which to print results, and
     the optional <rr-add> to determine whether processes should be added to the
     BEGINNING or END of the ready queue in the round robin simulation.
-'''
+"""
 
 from __future__ import print_function
 from collections import defaultdict as d_dict
@@ -33,21 +33,21 @@ DEBUG = False
 
 # ---------------------------------------------------------------------------- #
 
-'''
+"""
 Helper method to print to stderr.
 :param:     *args, all non-keyworded arguments.
             **kwargs, all keyworded arguments.
-'''
+"""
 def err( *args, **kwargs ):
     print( *args, file=sys.stderr, **kwargs )
 
 
-'''
+"""
 Helper method to read in file input.
 :param:     f_name, file name to find in directory and read.
 :return:    d_dict of process id mapped to tuple of details, if successful
             os.EX_IOERR, if file fails, ex.EX_DATAERR, is file is not formatted
-'''
+"""
 def read_file( f_name ):
     pwd = os.path.dirname( __file__ )
     path = os.path.join( pwd, f_name )
@@ -72,50 +72,73 @@ def read_file( f_name ):
     return procs
 
 
-'''
+"""
+Helper method to print scheduling results.
+:param:     res, d_dict to print.
+"""
+def print_res( res ):
+    print( "-- average CPU burst time: {} ms".format(res[0]) )
+    print( "-- average wait time: {} ms".format(res[1]) )
+    print( "-- average turnaround time: {} ms".format(res[2]) )
+    print( "-- total number of context switches: {}".format(res[3]) )
+    print( "-- total number of preemptions: {}".format(res[4]) )
+
+
+"""
 Simulator for FCFS algorithm.
 :param:     procs, d_dict of processes to simulate.
-:return:    5-tuple of simulation results.
-'''
+:return:    d_dict of simulation results.
+"""
 def fcfs( procs ):
     if DEBUG:
         print( "\nFCFS" )
-    res = tuple()
 
-    comp = lambda item: item[1][0]
+    res = d_dict( int )
+    for i in range(5):
+        res[i] = 0
+
+    ''' comp = lambda item: item[1][0]
     ordered = o_dict()
     for pair in sorted( procs.items(), key = comp ):
         ordered[ pair[0] ] = pair[1]
 
     if DEBUG:
         for key, val in ordered.items():
-            print( "  {} -> {}".format(key, val) )
+            print( "  {} -> {}".format(key, val) ) '''
 
     return res
 
 
-'''
+"""
 Simulator for SRT algorithm.
 :param:     procs, d_dict of processes to simulate.
-:return:    5-tuple of simulation results.
-'''
+:return:    d_dict of simulation results.
+"""
 def srt( procs ):
     if DEBUG:
         print( "\nSRT" )
-    res = tuple()
+
+    res = d_dict( int )
+    for i in range(5):
+        res[i] = 0
+
     return res
 
 
-'''
+"""
 Simulator for RR algorithm.
 :param:     procs, d_dict of processes to simulate.
             add, RR_ADD global to determine queue addtion.
-:return:    5-tuple of simulation results.
-'''
+:return:    d_dict of simulation results.
+"""
 def rr( procs, add=False ):
     if DEBUG:
         print( "\nRR" )
-    res = tuple()
+
+    res = d_dict( int )
+    for i in range(5):
+        res[i] = 0
+
     return res
 
 
@@ -130,7 +153,7 @@ if ( __name__ == "__main__" ):
                 RR_ADD = True
             elif ( sys.argv[3] != "END" ):
                 err( "ERROR: Invalid arguments" )
-                err( "USAGE: ./a.out <input-file> <stats-output-file> [<rr-add>]" )
+                sys.exit( "USAGE: ./a.out <input-file> <stats-output-file> [<rr-add>]" )
 
         procs = read_file( sys.argv[1] )
 
@@ -141,12 +164,27 @@ if ( __name__ == "__main__" ):
                 for key, val in procs.items():
                     print( "  {} -> {}".format(key, val) )
 
+            # Print FCFS results. #
             fcfs_res = fcfs( procs )
+            print( "Algorithm FCFS" )
+            print_res( fcfs_res )
+
+            # Print SRT results. #
             srt_res = srt( procs )
+            print( "Algorithm SRT" )
+            print_res( srt_res )
+
+            # Print RR results. #
             rr_res = rr( procs, RR_ADD )
+            print( "Algorithm RR" )
+            print_res( rr_res )
+
+            sys.exit()
+
+        else:
+            sys.exit( "ERROR: Invalid input file format" )
 
     else:
         # ( len( sys.argv ) != 3 ) and ( len( sys.argv ) != 4 ) #
         err( "ERROR: Invalid arguments" )
-        err( "USAGE: ./a.out <input-file> <stats-output-file> [<rr-add>]" )
-        sys.exit()
+        sys.exit( "USAGE: ./a.out <input-file> <stats-output-file> [<rr-add>]" )

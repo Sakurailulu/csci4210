@@ -148,7 +148,7 @@ int tour( Board * b ) {
                     int bytesWritten = write( p[1], &tmp._moves,
                             sizeof( int ) );
                     if ( bytesWritten == -1 ) {
-                        fprintf( stderr, "ERROR: write() failed.\n" );.
+                        fprintf( stderr, "ERROR: write() failed\n" );
                         return EXIT_FAILURE;
                     } else {
                         printf( "PID %d: Sending %d on pipe to parent pid %d\n",
