@@ -104,6 +104,11 @@ int tour( Board bd ) {
     int poss = findPoss( bd, moves );
 
     int p[2];
+    int rc = pipe( p );
+    if ( rc < 0 ) {
+        fprintf( stderr, "ERROR: pipe() failed\n" );
+        exit( EXIT_FAILURE );
+    }
 
     int sols[poss];
     if ( poss >= 1 ) {
@@ -114,12 +119,6 @@ int tour( Board bd ) {
 #ifdef DISPLAY_BOARD
             printBoard( bd, getpid(), false );
 #endif
-
-            int rc = pipe( p );
-            if ( rc < 0 ) {
-                fprintf( stderr, "ERROR: pipe() failed\n" );
-                exit( EXIT_FAILURE );
-            }
 
             pid_t pids[poss];
             int i;
@@ -144,6 +143,10 @@ int tour( Board bd ) {
 #ifndef NO_PARALLEL
             int status;
             for ( int j = 0; j < poss; ++j ) {
+#ifdef DEBUG_MODE
+                printf( "waiting...\n" );
+                fflush( stdout );
+#endif
                 waitpid( pids[j], &status, 0 );
                 if ( WIFSIGNALED( status ) ) {
                     exit( EXIT_FAILURE );
@@ -153,6 +156,11 @@ int tour( Board bd ) {
 
             if ( pids[i] > 0 ) {
                 for ( int j = 0; j < poss; ++j ) {
+#ifdef DEBUG_MODE
+                    printf( "reading...\n" );
+                    fflush( stdout );
+#endif
+                    close( p[1] );                          p[1] = -1;
                     int in = read( p[0], &sols[j], sizeof( int ) );
                     if ( in < 0 ) {
                         fprintf( stderr, "ERROR: read() failed\n" );
@@ -177,6 +185,11 @@ int tour( Board bd ) {
 #endif
 
         /* pipe */
+#ifdef DEBUG_MODE
+        printf( "writing %d to %d...\n", bd._moves, p[1] );
+        fflush( stdout );
+#endif
+        close( p[0] );                          p[0] = -1;
         int out = write( p[1], &( bd._moves ), sizeof( int ) );
         if ( out < 0 ) {
             fprintf( stderr, "ERROR: write() failed\n" );
