@@ -6,6 +6,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/wait.h>
 #include <unistd.h>
 
 typedef struct {
@@ -160,6 +161,7 @@ int tour( Board bd ) {
                 }
 
                 sol = max( poss, sols );
+                if ( getpid() == PAR_PID ) { return sol; }
             }
         } else {
             /* poss == 1 :: don't fork */
@@ -175,12 +177,13 @@ int tour( Board bd ) {
 #endif
 
         /* pipe */
-        int out = write( p[1], &bd._moves, sizeof( int ) );
+        int out = write( p[1], &( bd._moves ), sizeof( int ) );
         if ( out < 0 ) {
             fprintf( stderr, "ERROR: write() failed\n" );
             exit( EXIT_FAILURE );
+        } else {
+            exit( EXIT_SUCCESS );
         }
-        exit( EXIT_SUCCESS );
     }
 
     return sol;

@@ -6,6 +6,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/wait.h>
 #include <unistd.h>
 
 typedef struct {
@@ -158,7 +159,7 @@ int tour( Board bd ) {
         }
     } else {
         /* poss < 1 */
-        printf( "PID %d: Dead end after move#%d\n", getpid(), bd._moves );
+        printf( "PID %d: Dead end after move #%d\n", getpid(), bd._moves );
 #ifdef DISPLAY_BOARD
         printBoard( bd, getpid(), false );
 #endif
