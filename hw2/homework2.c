@@ -1,308 +1,298 @@
 /* homework2.c
  * Griffin Melnick, melnig@rpi.edu
- *
- * Emulating a solution finding algorithm to the knight's tour problem, we
- * take a grid of m x n squares and iterate through children processes to
- * determine the maximum number of moves possible. This is called by the
- * command:
- *
- *   bash$ ./a.out <m> <n>
- *
- * Where *m* and *n* are the respective grid lengths.
- *
- * Compilable with the following -D flags:
- *   -- DEBUG_MODE, provides debug output.
- *   -- DISPLAY_BOARD, provides output of current board.
- *   -- NO_PARALLEL, attempts to prevent interleaving by forcing waits.
  */
 
-#include <ctype.h>
+#include <limits.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include <sys/wait.h>
 #include <unistd.h>
 
-/* Helper structs. */
-/** Provides representation of coordinate pair to help with positioning. */
 typedef struct {
-    int _x;
-    int _y;
-} Pair;
+    int _x, _y;
+} Coord;
 
-
-/** Provides representation of board on which to perform the knight's tour. */
 typedef struct {
-    int _cols;
-    int _rows;
-    int _moves;
-    Pair _curr;
+    int _cols, _rows, _moves;
+    Coord _curr;
     char ** _grid;
 } Board;
 
+#define PAR_PID getpid()
+#define COORD_SIZE sizeof( Coord )
+#define BOARD_SIZE sizeof( Board )
 
-/* Initial method declarations. */
-void printBoard( pid_t pid, Board b );
-int findPossMoves( Board b, Pair * moveTo );
-int tour( Board * b );
+const Coord all[8] = { (Coord){ ._x = +1, ._y = -2 },   /* up, then right */
+                       (Coord){ ._x = +2, ._y = -1 },   /* right, then up */
+                       (Coord){ ._x = +2, ._y = +1 },   /* right, then down */
+                       (Coord){ ._x = +1, ._y = +2 },   /* down, then right */
+                       (Coord){ ._x = -1, ._y = +2 },   /* down, the left */
+                       (Coord){ ._x = -2, ._y = +1 },   /* left, then down */
+                       (Coord){ ._x = -2, ._y = -1 },   /* left, then up */
+                       (Coord){ ._x = -1, ._y = -2 } }; /* up, then left */
 
-/* Constant array with all possible movements. */
-const Pair moves[8] = { (Pair){ ._x = +1, ._y = -2 },   /* up, then right */
-                        (Pair){ ._x = +2, ._y = -1 },   /* right, then up */
-                        (Pair){ ._x = +2, ._y = +1 },   /* right, then down */
-                        (Pair){ ._x = +1, ._y = +2 },   /* down, then right */
-                        (Pair){ ._x = -1, ._y = +2 },   /* down, then left */
-                        (Pair){ ._x = -2, ._y = +1 },   /* left, then down */
-                        (Pair){ ._x = -2, ._y = -1 },   /* left, then up */
-                        (Pair){ ._x = -1, ._y = -2 } }; /* up, then left */
+/* -------------------------------------------------------------------------- */
+
+int max( int n, int nums[] );
+void freeBoard( Board * bd );
+void printBoard( Board bd, pid_t pid, bool debug );
+int findPoss( Board bd, Coord * moves );
+void step( Board * bd, Coord to );
+void tour( Board bd, int * sol, int from, int to );
+
+/* -------------------------------------------------------------------------- */
+
+int max( int n, int nums[] ) {
+    int max = INT_MIN;
+    for ( int i = 0; i < n; ++i ) {
+        max = ( ( max > nums[i] ) ? max : nums[i] );
+    }
+    return max;
+}
 
 
-/* ------------------------------------------------------------------------- */
+void freeBoard( Board * bd ) {
+    for ( int i = 0; i < (*bd)._rows; ++i ) {
+        free( (*bd)._grid[i] );                 (*bd)._grid[i] = NULL;
+    }
+    free( (*bd)._grid );                        (*bd)._grid = NULL;
+}
 
-/* Board printing method ( specifically used with DISPLAY_BOARD ).
- * @param       b, Board struct to print.
- */
-void printBoard( pid_t pid, Board b ) {
-    for ( int i = 0; i < b._rows; ++i ) {
-        printf( "PID %d:  %s\n", pid, b._grid[i] );
+
+void printBoard( Board bd, pid_t pid, bool debug ) {
+    for ( int i = 0; i < bd._rows; ++i ) {
+        if ( !debug ) { printf( "PID %d: ", pid ); }
+        printf( "  %s\n", bd._grid[i] );
+        fflush( stdout );
     }
 }
 
 
-/* Finds count of possible moves from current position.
- * @param       b, Board struct to search.
- *              moveTo, Pair struct pointer to store valid next moves.
- * @return      count of possible moves found.
- * @modifies    moveTo
- * @effects     adds Pairs with valid next moves.
- */
-int findPossMoves( Board b, Pair * moveTo ) {
-    int numPoss = 0;
+int findPoss( Board bd, Coord moves[] ) {
+    int poss = 0;
     for ( int i = 0; i < 8; ++i ) {
-        int tmpX = b._curr._x + moves[i]._x, tmpY = b._curr._y + moves[i]._y;
-        if ( ( ( 0 <= tmpX ) && ( tmpX < b._cols ) ) &&
-                ( ( 0 <= tmpY ) && ( tmpY < b._rows ) ) &&
-                ( b._grid[tmpY][tmpX] != 'k' ) ) {
-            moveTo[numPoss] = (Pair){ ._x = tmpX, ._y = tmpY };
-            ++numPoss;
+        Coord new = (Coord){ ._x = ( bd._curr._x + all[i]._x ), 
+                             ._y = ( bd._curr._y + all[i]._y ) };
+        if ( ( ( 0 <= new._x ) && ( new._x < bd._cols ) ) && 
+                ( ( 0 <= new._y ) && ( new._y < bd._rows ) ) && 
+                ( bd._grid[new._y][new._x] != 'k' ) ) {
+            moves[poss] = new;
+            ++poss;
+
+#ifdef DEBUG_MODE
+            printf( "  poss. move %d --> (%d, %d)\n", poss, new._x, new._y );
+            fflush( stdout );
+#endif
         }
     }
-
-    return numPoss;
+    return poss;
 }
 
 
-/* Touring simulation.
- * @param       b, Board struct pointer.
- * @return      EXIT_SUCCESS or EXIT_FAILURE depending on children processes.
- * @modifies    b
- * @effects     marks spots visited by changing from '.' to 'k'.
- */
-int tour( Board * b ) {
-#ifdef DEBUG_MODE
-    printf( "    %d touring...\n", getpid() );
-#endif
+void step( Board * bd, Coord to ) {
+    (*bd)._curr = to;
+    (*bd)._grid[(*bd)._curr._y][(*bd)._curr._x] = 'k';
+    ++( (*bd)._moves );
+}
 
-    Board tmp = *b;
 
-    /* Count number of valid next moves. */
-    Pair * moveTo = calloc( 8, sizeof( Pair ) );
-    int poss = findPossMoves( tmp, moveTo );
-    moveTo = realloc( moveTo, ( poss * sizeof( Pair ) ) );
-#ifdef DEBUG_MODE
-    printf( "        poss = %d\n", poss );
-    for ( int i = 0; i < poss; ++i ) {
-        printf( "            move %d: (%d, %d)\n", ( i + 1 ), moveTo[i]._x,
-                moveTo[i]._y );
-    }
-#endif
+void tour( Board bd, int * sol, int from, int to ) {
+    Coord moves[8];
+    int poss = findPoss( bd, moves );
 
-    if ( poss > 0 ) {
+    int sols[poss];
+    int p[poss][2];
+
+    int i = 0;
+    if ( poss >= 1 ) {
         if ( poss > 1 ) {
-            printf( "PID %d: Multiple moves possible after move #%d\n",
-                    getpid(), tmp._moves );
+            printf( "PID %d: %d moves possible after move #%d\n", getpid(), 
+                    poss, bd._moves );
+            fflush( stdout );
 #ifdef DISPLAY_BOARD
-            printBoard( getpid(), tmp );
+            printBoard( bd, getpid(), false );
 #endif
 
             pid_t pids[poss];
-            int * numMoves = calloc( poss, sizeof( int ) );
-            for ( int i = 0; i < poss; ++i ) {
-                /* Initialize pipe. */
-                int p[2], rc;
-                if ( ( rc = pipe( p ) ) < 0 ) {
-                    fprintf( stderr, "ERROR: pipe() failed.\n" );
-                    return EXIT_FAILURE;
+            for ( i = 0; i < poss; ++i ) {
+                fflush( stdout );               /* Flush for safety in fork. */
+ 
+                int rc = pipe( p[i] );
+                if ( rc < 0 ) {
+                    fprintf( stderr, "ERROR: pipe() failed\n" );
+                } else {
+                    from = p[i][0];             to = p[i][1];
+                }
+#ifdef DEBUG_MODE
+                printf( "  read descriptor --> %d, write descriptor --> %d\n",
+                        from, to );
+                fflush( stdout );
+#endif
+
+                pids[i] = fork();
+
+                if ( pids[i] < 0 ) {
+                    fprintf( stderr, "ERROR: tour failed\n" );
+                    freeBoard( &bd );
+                    exit( EXIT_FAILURE );
+                } else if ( pids[i] == 0 ) {
+                    step( &bd, moves[i] );
+                    tour( bd, sol, from, to );
+                    break;
                 }
 
-                /* Fork to all children processes. */
-                if ( ( pids[i] = fork() ) < 0 ) {
-                    fprintf( stderr, "ERROR: fork() failed.\n" );
-                    return EXIT_FAILURE;
-                } else if ( pids[i] == 0 ) {    /* CHILD */
-                    tmp._curr = moveTo[i];
-                    tmp._grid[tmp._curr._y][tmp._curr._x] = 'k';
-                    ++tmp._moves;
-
-                    close( p[0] );              p[0] = -1;
-                    int bytesWritten = write( p[1], &tmp._moves,
-                            sizeof( int ) );
-                    if ( bytesWritten == -1 ) {
-                        fprintf( stderr, "ERROR: write() failed\n" );
-                        return EXIT_FAILURE;
-                    } else {
-                        printf( "PID %d: Sending %d on pipe to parent pid %d\n",
-                                getpid(), tmp._moves, getppid() );
-                    }
-
-                    tour( &tmp );
-
-                    /* Freeing memory that will get lost in children. */
-                    free( numMoves );
-                    free( moveTo );
-                    for ( int j = 0; j < (*b)._rows; ++j ) {
-                        free( (*b)._grid[j] );
-                    }
-                    free( (*b)._grid );
-                    exit( EXIT_SUCCESS );
-                } else {                        /* PARENT */
-                    close( p[1] );              p[1] = -1;
-                    int bytesRead = read( p[0], &numMoves[i], sizeof( int ) );
-                    if ( bytesRead == -1 ) {
-                        fprintf( stderr, "ERROR: read() failed.\n" );
-                        return EXIT_FAILURE;
-                    } else {
-                        printf( "PID %d: Received %d from child pid %d\n",
-                                getpid(), numMoves[i], pids[i] );
-                    }
-                }
-            }
-            while ( poss > 0 ) {
 #ifdef NO_PARALLEL
                 wait( NULL );
 #endif
-
-                if ( numMoves[poss - 1] > tmp._moves ) {
-                    tmp._moves = numMoves[poss - 1];
-                }
-                --poss;
             }
-            free( numMoves );
+
+#ifndef NO_PARALLEL
+            int status;
+            for ( int j = 0; j < poss; ++j ) {
+                waitpid( pids[j], &status, 0 );
+                if ( WIFSIGNALED( status ) ) {
+                    exit( EXIT_FAILURE );
+                }
+            }
+#endif
+
+            if ( pids[i] > 0 ) {
+                for ( int j = 0; j < poss; ++j ) {
+                    close( to );              to = -1;
+                    int in = read( from, &sols[j], sizeof( int ) );
+#ifdef DEBUG_MODE
+                    printf( "  reading %d from descriptor %d...\n", sols[j], 
+                            from );
+                    fflush( stdout );
+#endif
+
+                    if ( in < 0 ) {
+                        fprintf( stderr, "ERROR: read() failed\n" );
+                        exit( EXIT_FAILURE );
+                    } else {
+                        printf( "PID %d: Received %d from child\n", getpid(), 
+                                sols[j] );
+                        fflush( stdout );
+                    }
+                }
+
+                *sol = max( poss, sols );
+            }
         } else {
-            /* poss <= 1 */
-            tmp._curr = moveTo[0];
-            tmp._grid[tmp._curr._y][tmp._curr._x] = 'k';
-            ++tmp._moves;
-            tour( &tmp );
+            /* poss == 1 :: don't fork */
+            step( &bd, moves[0] );
+            tour( bd, sol, from, to );
         }
     } else {
-        /* poss <= 0 */
-        printf( "PID %d: Dead end after move #%d\n", getpid(), tmp._moves );
-
+        /* poss < 1 :: dead end */
+        printf( "PID %d: Dead end after move #%d\n", getpid(), bd._moves );
+        fflush( stdout );
 #ifdef DISPLAY_BOARD
-        printBoard( getpid(), tmp );
+        printBoard( bd, getpid(), false );
 #endif
-    }
 
-    free( moveTo );
-    b = &tmp;
-    return EXIT_SUCCESS;
+        close( from );                          from = -1;
+        int out = write( to, &( bd._moves ), sizeof( int ) );
+#ifdef DEBUG_MODE
+        printf( "  writing %d to descriptor %d...\n", bd._moves, to );
+        fflush( stdout );
+#endif
+
+        if ( out < 0 ) {
+            fprintf( stderr, "ERROR: write() failed\n" );
+            exit( EXIT_FAILURE );
+        } else {
+            printf( "PID %d: Sent %d on pipe to parent\n", getpid(), bd._moves );
+            fflush( stdout );
+            exit( EXIT_SUCCESS );
+        }
+    }
 }
 
-
-/* ------------------------------------------------------------------------- */
+/* -------------------------------------------------------------------------- */
 
 int main( int argc, char * argv[] ) {
-    setbuf( stdout, NULL );         /* Prevent buffering in stdout. */
-    if ( argc == 3 ) {
-#ifdef DEBUG_MODE
-        printf( "started...\n" );
-#endif
+    setbuf( stdout, NULL );                     /* Prevent stdout buffering. */
 
+    if ( argc == 3 ) {
         char * tmp;
         int m = strtol( argv[1], &tmp, 10 ), n = strtol( argv[2], &tmp, 10 );
         if ( ( m > 2 ) && ( n > 2 ) ) {
-#ifdef DEBUG_MODE
-            printf( "    valid args, continuing...\n" );
-#endif
 
-            /* Initializing Board struct to be used throughout. */
+            /* Board initialization. */
+            /** Static assignments. */
+            Board bd = (Board){ ._cols = m, ._rows = n, ._moves = 1,
+                                ._curr = (Coord){ ._x = 0, ._y = 0 } };
+
             /** Memory allocation. */
-#ifdef DEBUG_MODE
-            printf( "    intializing board...\n" );
-#endif
-
-            Board touring;
-            touring._cols = m;                  touring._rows = n;
-            touring._grid = calloc( touring._rows, sizeof( char* ) );
-            if ( touring._grid == NULL ) {
-                fprintf( stderr, "ERROR: calloc() failed." );
+            bd._grid = calloc( bd._rows, sizeof( char* ) );
+            if ( bd._grid == NULL ) {
+                fprintf( stderr, "ERROR: full board allocation failed\n" );
                 return EXIT_FAILURE;
-            } else {
-                for ( int i = 0; i < touring._rows; ++i ) {
-                    touring._grid[i] = calloc( touring._cols, sizeof( char ) );
-                    if ( touring._grid[i] == NULL ) {
-                        fprintf( stderr, "ERROR: calloc() failed." );
-                        return EXIT_FAILURE;
+            }
+            for ( int i = 0; i < bd._rows; ++i ) {
+                bd._grid[i] = calloc( ( bd._cols + 1 ), sizeof( char ) );
+                if ( bd._grid[i] == NULL ) {
+                    fprintf( stderr, "ERROR: row allocation failed\n" );
+                    return EXIT_FAILURE;
+                }
+            }
+
+            /** Fill board with markers. */
+            for ( int i = 0; i < bd._rows; ++i ) {
+                for ( int j = 0; j <= bd._cols; ++j ) {
+                    if ( j != bd._cols ) {
+                        bd._grid[i][j] = '.';
+                    } else {
+                        /* j == bd._cols :: last character in string */
+                        bd._grid[i][j] = '\0';
                     }
                 }
             }
-
-            /** Fill grid with marker values. */
-            for ( int i = 0; i < touring._rows; ++i ) {
-                for ( int j = 0; j < touring._cols; ++j ) {
-                    touring._grid[i][j] = '.';
-                }
-            }
-            touring._grid[0][0] = 'k';          touring._moves = 1;
-            touring._curr = (Pair){ ._x = 0, ._y = 0 };
+            bd._grid[0][0] = 'k';
 
 #ifdef DEBUG_MODE
-            printf( "        Board details:\n" );
-            printf( "        _x = %d, _y = %d, _moves = %d\n", touring._cols,
-                        touring._rows, touring._moves );
-            printf( "        _curr = (%d, %d)\n", touring._curr._x,
-                        touring._curr._y );
+            printf( "Initial board details:\n" );
+            printf( "_cols = %d, _rows = %d, _moves = %d, _curr = (%d, %d)\n", 
+                    bd._cols, bd._rows, bd._moves, bd._curr._x, bd._curr._y );
+            fflush( stdout );
+
+            printBoard( bd, 0, true );
+            printf( "\n" );
+            fflush( stdout );
 #endif
 
-            /* Touring simulation. */
-            pid_t pid = getpid();
-            printf( "PID %d: Solving the knight's tour problem for a %dx%d board.\n",
-                    pid, touring._cols, touring._rows );
+            /* Knight's tour simulation. */
+            printf( "PID %d: Solving the knight's tour problem for a %dx%d board\n",
+                    PAR_PID, bd._cols, bd._rows );
+            fflush( stdout );
+            int sol = 0, from = 0, to = 0;
+            tour( bd, &sol, from, to );
 
-            int rc = tour( &touring );
-            if ( !rc ) {
-                /* EXIT_SUCCESS */
+            /* Print solution, free memory, and exit. */
+            if ( sol != EXIT_FAILURE ) {
                 printf( "PID %d: Best solution found visits %d squares (out of %d)\n",
-                        getpid(), touring._moves, ( touring._rows * touring._cols ) );
+                        PAR_PID, sol, ( bd._cols * bd._rows ) );
+                fflush( stdout );
+
+                freeBoard( &bd );
+                return EXIT_SUCCESS;
             } else {
-                /* EXIT_FAILURE */
+                /* sol == EXIT_FAILURE :: tour failed */
                 fprintf( stderr, "ERROR: knight's tour failed.\n" );
+                freeBoard( &bd );
             }
-
-            /* Freeing allocated memory in board. */
-#ifdef DEBUG_MODE
-            printf( "    freeing memory...\n" );
-#endif
-
-            for ( int i = 0; i < touring._rows; ++i ) {
-                free( touring._grid[i] );       touring._grid[i] = NULL;
-            }
-            free( touring._grid );              touring._grid = NULL;
-            return rc;
+        
         } else {
-            /* ( m <= 2 ) && ( n <= 2 ) */
+            /* ( m <= 2 ) || ( n <= 2 ) :: invalid argument values */
             fprintf( stderr, "ERROR: Invalid argument(s)\n" );
-            fprintf( stderr, "USAGE: %s <m> <n>\n", argv[0] );
-            return EXIT_FAILURE;
         }
     } else {
-        /* argc != 3 */
+        /* argc != 3 :: invalid arguments */
         fprintf( stderr, "ERROR: Invalid argument(s)\n" );
-        fprintf( stderr, "USAGE: %s <m> <n>\n", argv[0] );
-        return EXIT_FAILURE;
+        fprintf( stderr, "USAGE: a.out <m> <n>\n" );
     }
 
-    /* We should never be able to get to this point. */
     return EXIT_FAILURE;
 }
