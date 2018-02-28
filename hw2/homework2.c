@@ -121,6 +121,8 @@ void tour( Board bd, int * sol, int from, int to ) {
                 int rc = pipe( p[i] );
                 if ( rc < 0 ) {
                     fprintf( stderr, "ERROR: pipe() failed\n" );
+                    freeBoard( &bd );
+                    exit( EXIT_FAILURE );
                 } else {
                     from = p[i][0];             to = p[i][1];
                 }
@@ -140,8 +142,39 @@ void tour( Board bd, int * sol, int from, int to ) {
                     step( &bd, moves[i] );
                     tour( bd, sol, from, to );
                     break;
-                }
+                } else {
+#ifdef NO_PARALLEL
+                    wait( NULL );
+#endif
+#ifndef NO_PARALLEL
+                    int status;
+                    waitpid( pids[i], &status, 0 );
+                    if ( WIFSIGNALED( status ) ) {
+                        freeBoard( &bd );
+                        exit( EXIT_FAILURE );
+                    }
+#endif
 
+                    close( to );
+                    int in = read( from, &sols[i], sizeof( int ) );
+#ifdef DEBUG_MODE
+                    printf( "  reading %d from %d...\n", sols[i], from );
+                    fflush( stdout );
+#endif
+
+                    if ( in < 0 ) {
+                        fprintf( stderr, "ERROR: read() failed\n" );
+                        freeBoard( &bd );
+                        exit( EXIT_FAILURE );
+                    } else {
+                        /* in >= 0 */
+                        printf( "PID %d: Received %d from child\n", getpid(),
+                                sols[i] );
+                        fflush( stdout );
+                    }
+                }
+            }
+/*
 #ifdef NO_PARALLEL
                 wait( NULL );
 #endif
@@ -152,6 +185,7 @@ void tour( Board bd, int * sol, int from, int to ) {
             for ( int j = 0; j < poss; ++j ) {
                 waitpid( pids[j], &status, 0 );
                 if ( WIFSIGNALED( status ) ) {
+                    freeBoard( &bd );
                     exit( EXIT_FAILURE );
                 }
             }
@@ -159,7 +193,7 @@ void tour( Board bd, int * sol, int from, int to ) {
 
             if ( pids[i] > 0 ) {
                 for ( int j = 0; j < poss; ++j ) {
-                    close( to );              to = -1;
+                    close( to );              //to = -1;
                     int in = read( from, &sols[j], sizeof( int ) );
 #ifdef DEBUG_MODE
                     printf( "  reading %d from descriptor %d...\n", sols[j], 
@@ -169,6 +203,7 @@ void tour( Board bd, int * sol, int from, int to ) {
 
                     if ( in < 0 ) {
                         fprintf( stderr, "ERROR: read() failed\n" );
+                        freeBoard( &bd );
                         exit( EXIT_FAILURE );
                     } else {
                         printf( "PID %d: Received %d from child\n", getpid(), 
@@ -176,9 +211,9 @@ void tour( Board bd, int * sol, int from, int to ) {
                         fflush( stdout );
                     }
                 }
-
+*/
                 *sol = max( poss, sols );
-            }
+            //}
         } else {
             /* poss == 1 :: don't fork */
             step( &bd, moves[0] );
@@ -192,7 +227,7 @@ void tour( Board bd, int * sol, int from, int to ) {
         printBoard( bd, getpid(), false );
 #endif
 
-        close( from );                          from = -1;
+        close( from );                          //from = -1;
         int out = write( to, &( bd._moves ), sizeof( int ) );
 #ifdef DEBUG_MODE
         printf( "  writing %d to descriptor %d...\n", bd._moves, to );
@@ -201,10 +236,12 @@ void tour( Board bd, int * sol, int from, int to ) {
 
         if ( out < 0 ) {
             fprintf( stderr, "ERROR: write() failed\n" );
+            freeBoard( &bd );
             exit( EXIT_FAILURE );
         } else {
             printf( "PID %d: Sent %d on pipe to parent\n", getpid(), bd._moves );
             fflush( stdout );
+            freeBoard( &bd );
             exit( EXIT_SUCCESS );
         }
     }
@@ -269,6 +306,7 @@ int main( int argc, char * argv[] ) {
             fflush( stdout );
             int sol = 0, from = 0, to = 0;
             tour( bd, &sol, from, to );
+            // if ( getpid() != PAR_PID ) { exit( EXIT_SUCCESS ); }
 
             /* Print solution, free memory, and exit. */
             if ( sol != EXIT_FAILURE ) {
@@ -278,8 +316,7 @@ int main( int argc, char * argv[] ) {
 
                 freeBoard( &bd );
                 return EXIT_SUCCESS;
-            } else {
-                /* sol == EXIT_FAILURE :: tour failed */
+
                 fprintf( stderr, "ERROR: knight's tour failed.\n" );
                 freeBoard( &bd );
             }
