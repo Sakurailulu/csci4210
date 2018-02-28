@@ -2,7 +2,6 @@
  * Griffin Melnick, melnig@rpi.edu
  */
 
-#include <limits.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -19,8 +18,7 @@ typedef struct {
     char ** _grid;
 } Board;
 
-#define COORD_SIZE sizeof( Coord )
-#define BOARD_SIZE sizeof( Board )
+pid_t PAR_PID;
 
 const Coord all[8] = { (Coord){ ._x = +1, ._y = -2 },   /* up, then right */
                        (Coord){ ._x = +2, ._y = -1 },   /* right, then up */
@@ -42,8 +40,14 @@ void tour( Board bd, int * sol, int from, int to );
 
 /* -------------------------------------------------------------------------- */
 
+/* Helper method to find maximum value in array.
+ * @param       n, length of array.
+ *              nums, array of values to compare.
+ * @return      the maximum value of 'nums' with a lowest possible return value
+ *                of 0.
+ */
 int max( int n, int nums[] ) {
-    int max = INT_MIN;
+    int max = 0;
     for ( int i = 0; i < n; ++i ) {
         max = ( ( max > nums[i] ) ? max : nums[i] );
     }
@@ -51,6 +55,11 @@ int max( int n, int nums[] ) {
 }
 
 
+/* Helper method to free allocated memory in Board struct.
+ * @param       bd, pointer to Board object.
+ * @modifies    bd
+ * @effects     frees each row in bd._grid as well as bd._grid.
+ */
 void freeBoard( Board * bd ) {
     for ( int i = 0; i < (*bd)._rows; ++i ) {
         free( (*bd)._grid[i] );                 (*bd)._grid[i] = NULL;
@@ -59,6 +68,12 @@ void freeBoard( Board * bd ) {
 }
 
 
+/* Helper method to print Board struct.
+ * @param       bd, Board object to print.
+ *              pid, PID of process currently calling the method.
+ *              debug, boolean to determine whether of not to print preceding 
+ *                "PID ...: "
+ */
 void printBoard( Board bd, pid_t pid, bool debug ) {
     for ( int i = 0; i < bd._rows; ++i ) {
         if ( !debug ) { printf( "PID %d: ", pid ); }
@@ -68,6 +83,13 @@ void printBoard( Board bd, pid_t pid, bool debug ) {
 }
 
 
+/* Helper method to find all possible moves from current position in Board.
+ * @param       bd, Board object through which to move.
+ *              moves, Coord struct array to store valid next moves.
+ * @return      count of possible moves.
+ * @modifies    moves
+ * @effects     store Coord objects from 'all' that are valid next moves.
+ */
 int findPoss( Board bd, Coord moves[] ) {
     int poss = 0;
     for ( int i = 0; i < 8; ++i ) {
@@ -80,7 +102,7 @@ int findPoss( Board bd, Coord moves[] ) {
             ++poss;
 
 #ifdef DEBUG_MODE
-            printf( "  poss. move %d --> (%d, %d)\n", poss, new._x, new._y );
+            // printf( "  poss. move %d --> (%d, %d)\n", poss, new._x, new._y );
             fflush( stdout );
 #endif
         }
@@ -89,6 +111,13 @@ int findPoss( Board bd, Coord moves[] ) {
 }
 
 
+/* Helper method to take next step in board.
+ * @param       bd, pointer to Board object.
+ *              to, Coord object to which to move.
+ * @modifies    bd
+ * @effects     changes '_curr' to 'to', switches "." to "k" in '_grid' at 
+ *                '_curr', and increments '_moves'.
+ */
 void step( Board * bd, Coord to ) {
     (*bd)._curr = to;
     (*bd)._grid[(*bd)._curr._y][(*bd)._curr._x] = 'k';
@@ -96,166 +125,166 @@ void step( Board * bd, Coord to ) {
 }
 
 
-void tour( Board bd, int * sol, int from, int to ) {
+/* Touring simulation method.
+ * @param       bd, Board to tour.
+ *              bestSol, pointer to best solution found.
+ * @modifies    bestSol
+ * @effects     stores best possible solution.
+ */
+void tour( Board bd, int * bestSol, int from, int to ) {
     Coord moves[8];
-    int poss = findPoss( bd, moves );
+    int poss = findPoss( bd, moves ), sol = 0;
 
     int sols[poss];
-    int p[poss][2];
+    int p[2];
 
-    int i = 0;
     if ( poss >= 1 ) {
         if ( poss > 1 ) {
             printf( "PID %d: %d moves possible after move #%d\n", getpid(), 
                     poss, bd._moves );
             fflush( stdout );
+
 #ifdef DISPLAY_BOARD
             printBoard( bd, getpid(), false );
 #endif
 
-            pid_t pids[poss];
-            for ( i = 0; i < poss; ++i ) {
-                fflush( stdout );               /* Flush for safety in fork. */
- 
-                int rc = pipe( p[i] );
-                if ( rc < 0 ) {
-                    fprintf( stderr, "ERROR: pipe() failed\n" );
-                    freeBoard( &bd );
-                    exit( EXIT_FAILURE );
-                } else {
-                    from = p[i][0];             to = p[i][1];
-                }
-#ifdef DEBUG_MODE
-                printf( "  read descriptor --> %d, write descriptor --> %d\n",
-                        from, to );
-                fflush( stdout );
-#endif
+            int rc;
+            if ( ( rc = pipe( p ) ) < 0 ) {
+                fprintf( stderr, "ERROR: pipe() failed\n" );
+                freeBoard( &bd );
 
-                pids[i] = fork();
+                *bestSol = EXIT_FAILURE;
+                exit( EXIT_FAILURE );
+            } else {
+                /* rc >= 0 */
+                from = p[0];                    to = p[1];
+            }
 
-                if ( pids[i] < 0 ) {
-                    fprintf( stderr, "ERROR: tour failed\n" );
+            for ( int i = 0; i < poss; ++i ) {
+                pid_t pid;
+                if ( ( pid = fork() ) < 0 ) {
+                    fprintf( stderr, "ERROR: fork() failed\n" );
                     freeBoard( &bd );
+
+                    *bestSol = EXIT_FAILURE;
                     exit( EXIT_FAILURE );
-                } else if ( pids[i] == 0 ) {
+                } else if ( pid == 0 ) {
+                    /* CHILD */
                     step( &bd, moves[i] );
-                    tour( bd, sol, from, to );
-                    break;
+                    tour( bd, bestSol, from, to );
                 } else {
+                    /* PARENT */
 #ifdef NO_PARALLEL
                     wait( NULL );
 #endif
+
 #ifndef NO_PARALLEL
                     int status;
-                    waitpid( pids[i], &status, 0 );
+                    waitpid( pid, &status, 0 );
                     if ( WIFSIGNALED( status ) ) {
                         freeBoard( &bd );
+
+                        *bestSol = EXIT_FAILURE;
                         exit( EXIT_FAILURE );
                     }
 #endif
 
-                    close( to );
-                    int in = read( from, &sols[i], sizeof( int ) );
 #ifdef DEBUG_MODE
-                    printf( "  reading %d from %d...\n", sols[i], from );
+                    printf( "  reading from %d...\n", from );
                     fflush( stdout );
 #endif
 
+                    int in = read( from, &( sols[i] ), sizeof( int ) );
                     if ( in < 0 ) {
                         fprintf( stderr, "ERROR: read() failed\n" );
                         freeBoard( &bd );
+
+                        *bestSol = EXIT_FAILURE;
                         exit( EXIT_FAILURE );
-                    } else {
-                        /* in >= 0 */
-                        printf( "PID %d: Received %d from child\n", getpid(),
-                                sols[i] );
-                        fflush( stdout );
                     }
-                }
-            }
-/*
-#ifdef NO_PARALLEL
-                wait( NULL );
-#endif
-            }
-
-#ifndef NO_PARALLEL
-            int status;
-            for ( int j = 0; j < poss; ++j ) {
-                waitpid( pids[j], &status, 0 );
-                if ( WIFSIGNALED( status ) ) {
-                    freeBoard( &bd );
-                    exit( EXIT_FAILURE );
-                }
-            }
-#endif
-
-            if ( pids[i] > 0 ) {
-                for ( int j = 0; j < poss; ++j ) {
-                    close( to );              //to = -1;
-                    int in = read( from, &sols[j], sizeof( int ) );
+                    /*if ( WIFEXITED( status ) ) {
+                        // close( to );
 #ifdef DEBUG_MODE
-                    printf( "  reading %d from descriptor %d...\n", sols[j], 
-                            from );
-                    fflush( stdout );
-#endif
-
-                    if ( in < 0 ) {
-                        fprintf( stderr, "ERROR: read() failed\n" );
-                        freeBoard( &bd );
-                        exit( EXIT_FAILURE );
-                    } else {
-                        printf( "PID %d: Received %d from child\n", getpid(), 
-                                sols[j] );
+                        printf( "  reading from %d...\n", from );
                         fflush( stdout );
+#endif
+                        int in = read( from, &( sols[i] ), sizeof( int ) );
+                        if ( in < 0 ) {
+                            fprintf( stderr, "ERROR: read() failed\n" );
+                            freeBoard( &bd );
+
+                            *bestSol = EXIT_FAILURE;
+                            exit( EXIT_FAILURE );
+                        }
+                    } else {
+                         !WIFEXITED( status )
+                        freeBoard( &bd );
+
+                        *bestSol = EXIT_FAILURE;
+                        exit( EXIT_FAILURE );
                     }
+#endif */
                 }
-*/
-                *sol = ( *sol > max( poss, sols ) ) ? *sol : max( poss, sols );
-            //}
+            }
+
+            for ( int i = 0; i < poss; ++i ) {
+                printf( "PID %d: Received %d from child\n", getpid(), sols[i] );
+                fflush( stdout );
+            }
+
+            sol = max( poss, sols );
+            if ( getpid() != PAR_PID ) {
+                printf( "PID %d: All child processes terminated; sent %d on pipe to parent\n",
+                        getpid(), sol );
+                fflush( stdout );
+                // exit( EXIT_SUCCESS );
+            }
+            *bestSol = ( *bestSol > sol ) ? *bestSol : sol;
         } else {
             /* poss == 1 :: don't fork */
             step( &bd, moves[0] );
-            tour( bd, sol, from, to );
+            tour( bd, bestSol, from, to );
         }
     } else {
         /* poss < 1 :: dead end */
         printf( "PID %d: Dead end after move #%d\n", getpid(), bd._moves );
         fflush( stdout );
+
 #ifdef DISPLAY_BOARD
         printBoard( bd, getpid(), false );
 #endif
 
-        close( from );                          //from = -1;
+        // close( from );
         int out = write( to, &( bd._moves ), sizeof( int ) );
+        
 #ifdef DEBUG_MODE
-        printf( "  writing %d to descriptor %d...\n", bd._moves, to );
+        printf( "  writing to %d...\n", to );
         fflush( stdout );
 #endif
-
+        
         if ( out < 0 ) {
             fprintf( stderr, "ERROR: write() failed\n" );
             freeBoard( &bd );
+
+            *bestSol = EXIT_FAILURE;
             exit( EXIT_FAILURE );
         } else {
             printf( "PID %d: Sent %d on pipe to parent\n", getpid(), bd._moves );
             fflush( stdout );
-            freeBoard( &bd );
-            exit( EXIT_SUCCESS );
         }
+
+        freeBoard( &bd );
+        exit( EXIT_SUCCESS );
     }
 }
 
 /* -------------------------------------------------------------------------- */
 
 int main( int argc, char * argv[] ) {
-    setbuf( stdout, NULL );                     /* Prevent stdout buffering. */
-
     if ( argc == 3 ) {
         char * tmp;
         int m = strtol( argv[1], &tmp, 10 ), n = strtol( argv[2], &tmp, 10 );
         if ( ( m > 2 ) && ( n > 2 ) ) {
-            const int parPid = getpid();
 
             /* Board initialization. */
             /** Static assignments. */
@@ -296,43 +325,31 @@ int main( int argc, char * argv[] ) {
             fflush( stdout );
 
             printBoard( bd, 0, true );
-            printf( "\n" );
-            fflush( stdout );
 #endif
 
             /* Knight's tour simulation. */
+            int sol = 0;
+            PAR_PID = getpid();
             printf( "PID %d: Solving the knight's tour problem for a %dx%d board\n",
-                    parPid, bd._cols, bd._rows );
+                    PAR_PID, bd._cols, bd._rows );
             fflush( stdout );
-            int sol = 0, from = 0, to = 0;
-            tour( bd, &sol, from, to );
-            // if ( getpid() != parPid ) { exit( EXIT_SUCCESS ); }
+
+            tour( bd, &sol, 0, 0 );
+            if ( getpid() != PAR_PID ) { exit( EXIT_SUCCESS ); }
 
             /* Print solution, free memory, and exit. */
             if ( sol != EXIT_FAILURE ) {
-                /* ----------------------------------------- */
-                /* - remove to ensure proper functionality - */
-                if ( ( bd._cols == 3 ) && ( bd._rows == 3 ) ) { sol = 8; }
-                if ( ( bd._cols == 3 ) && ( bd._rows == 4 ) ) { sol = 12; }
-                if ( ( bd._cols == 4 ) && ( bd._rows == 3 ) ) { sol = 12; }
-                if ( ( bd._cols == 3 ) && ( bd._rows == 5 ) ) { sol = 14; }
-                if ( ( bd._cols == 3 ) && ( bd._rows == 6 ) ) { sol = 17; }
-                if ( ( bd._cols == 4 ) && ( bd._rows == 4 ) ) { sol = 15; }
-                /* ----------------------------------------- */
-
-                if ( getpid() == parPid ) {
-                    printf( "PID %d: Best solution found visits %d squares (out of %d)\n",
-                            parPid, sol, ( bd._cols * bd._rows ) );
-                    fflush( stdout );
-                }
+                printf( "PID %d: Best solution found visits %d squares (out of %d)\n",
+                        PAR_PID, sol, ( bd._cols * bd._rows ) );
+                fflush( stdout );
 
                 freeBoard( &bd );
                 return EXIT_SUCCESS;
-            }// else {
+            } else {
                 /* sol == EXIT_FAILURE */
-            //    fprintf( stderr, "ERROR: knight's tour failed.\n" );
-            //    freeBoard( &bd );
-            //}
+                fprintf( stderr, "ERROR: knight's tour failed.\n" );
+                freeBoard( &bd );
+            }
         
         } else {
             /* ( m <= 2 ) || ( n <= 2 ) :: invalid argument values */
