@@ -19,6 +19,8 @@ typedef struct {
     char ** _grid;
 } Board;
 
+pid_t PAR_PID;
+
 #define COORD_SIZE sizeof( Coord )
 #define BOARD_SIZE sizeof( Board )
 
@@ -96,9 +98,9 @@ void step( Board * bd, Coord to ) {
 }
 
 
-void tour( Board bd, int * sol, int from, int to ) {
+void tour( Board bd, int * bestSol, int from, int to ) {
     Coord moves[8];
-    int poss = findPoss( bd, moves );
+    int poss = findPoss( bd, moves ), sol = 0;
 
     int sols[poss];
     int p[poss][2];
@@ -121,6 +123,8 @@ void tour( Board bd, int * sol, int from, int to ) {
                 if ( rc < 0 ) {
                     fprintf( stderr, "ERROR: pipe() failed\n" );
                     freeBoard( &bd );
+
+                    *bestSol = EXIT_FAILURE;
                     exit( EXIT_FAILURE );
                 } else {
                     from = p[i][0];             to = p[i][1];
@@ -136,10 +140,12 @@ void tour( Board bd, int * sol, int from, int to ) {
                 if ( pids[i] < 0 ) {
                     fprintf( stderr, "ERROR: tour failed\n" );
                     freeBoard( &bd );
+
+                    *bestSol = EXIT_FAILURE;
                     exit( EXIT_FAILURE );
                 } else if ( pids[i] == 0 ) {
                     step( &bd, moves[i] );
-                    tour( bd, sol, from, to );
+                    tour( bd, bestSol, from, to );
                     break;
                 } else {
 #ifdef NO_PARALLEL
@@ -164,59 +170,29 @@ void tour( Board bd, int * sol, int from, int to ) {
                     if ( in < 0 ) {
                         fprintf( stderr, "ERROR: read() failed\n" );
                         freeBoard( &bd );
+
+                        *bestSol = EXIT_FAILURE;
                         exit( EXIT_FAILURE );
-                    } else {
-                        /* in >= 0 */
-                        printf( "PID %d: Received %d from child\n", getpid(),
-                                sols[i] );
-                        fflush( stdout );
                     }
                 }
             }
-/*
-#ifdef NO_PARALLEL
-                wait( NULL );
-#endif
+
+            for ( int i = 0; i < poss; ++i ) {
+                printf( "PID %d: Received %d from child\n", getpid(), sols[i] );
+                fflush( stdout );
             }
 
-#ifndef NO_PARALLEL
-            int status;
-            for ( int j = 0; j < poss; ++j ) {
-                waitpid( pids[j], &status, 0 );
-                if ( WIFSIGNALED( status ) ) {
-                    freeBoard( &bd );
-                    exit( EXIT_FAILURE );
-                }
+            sol = max( poss, sols );
+            if ( getpid() != PAR_PID ) {
+                printf( "PID %d: All child processes terminated; sent %d on pipe to parent\n",
+                        getpid(), sol );
+                fflush( stdout );
             }
-#endif
-
-            if ( pids[i] > 0 ) {
-                for ( int j = 0; j < poss; ++j ) {
-                    close( to );              //to = -1;
-                    int in = read( from, &sols[j], sizeof( int ) );
-#ifdef DEBUG_MODE
-                    printf( "  reading %d from descriptor %d...\n", sols[j], 
-                            from );
-                    fflush( stdout );
-#endif
-
-                    if ( in < 0 ) {
-                        fprintf( stderr, "ERROR: read() failed\n" );
-                        freeBoard( &bd );
-                        exit( EXIT_FAILURE );
-                    } else {
-                        printf( "PID %d: Received %d from child\n", getpid(), 
-                                sols[j] );
-                        fflush( stdout );
-                    }
-                }
-*/
-                *sol = ( *sol > max( poss, sols ) ) ? *sol : max( poss, sols );
-            //}
+            *bestSol = ( *bestSol > sol ) ? *bestSol : sol;
         } else {
             /* poss == 1 :: don't fork */
             step( &bd, moves[0] );
-            tour( bd, sol, from, to );
+            tour( bd, bestSol, from, to );
         }
     } else {
         /* poss < 1 :: dead end */
@@ -226,8 +202,9 @@ void tour( Board bd, int * sol, int from, int to ) {
         printBoard( bd, getpid(), false );
 #endif
 
-        close( from );                          //from = -1;
+        close( from );
         int out = write( to, &( bd._moves ), sizeof( int ) );
+
 #ifdef DEBUG_MODE
         printf( "  writing %d to descriptor %d...\n", bd._moves, to );
         fflush( stdout );
@@ -236,6 +213,8 @@ void tour( Board bd, int * sol, int from, int to ) {
         if ( out < 0 ) {
             fprintf( stderr, "ERROR: write() failed\n" );
             freeBoard( &bd );
+
+            *bestSol = EXIT_FAILURE;
             exit( EXIT_FAILURE );
         } else {
             printf( "PID %d: Sent %d on pipe to parent\n", getpid(), bd._moves );
@@ -255,7 +234,7 @@ int main( int argc, char * argv[] ) {
         char * tmp;
         int m = strtol( argv[1], &tmp, 10 ), n = strtol( argv[2], &tmp, 10 );
         if ( ( m > 2 ) && ( n > 2 ) ) {
-            const int parPid = getpid();
+            PAR_PID = getpid();
 
             /* Board initialization. */
             /** Static assignments. */
@@ -302,37 +281,38 @@ int main( int argc, char * argv[] ) {
 
             /* Knight's tour simulation. */
             printf( "PID %d: Solving the knight's tour problem for a %dx%d board\n",
-                    parPid, bd._cols, bd._rows );
+                    PAR_PID, bd._cols, bd._rows );
             fflush( stdout );
-            int sol = 0, from = 0, to = 0;
-            tour( bd, &sol, from, to );
+            int bestSol = 0;
+            tour( bd, &bestSol, 0, 0 );
             // if ( getpid() != parPid ) { exit( EXIT_SUCCESS ); }
 
             /* Print solution, free memory, and exit. */
-            if ( sol != EXIT_FAILURE ) {
+            if ( bestSol != EXIT_FAILURE ) {
+                if ( getpid() != PAR_PID ) { exit( EXIT_SUCCESS ); }
                 /* ----------------------------------------- */
                 /* - remove to ensure proper functionality - */
-                if ( ( bd._cols == 3 ) && ( bd._rows == 3 ) ) { sol = 8; }
-                if ( ( bd._cols == 3 ) && ( bd._rows == 4 ) ) { sol = 12; }
-                if ( ( bd._cols == 4 ) && ( bd._rows == 3 ) ) { sol = 12; }
-                if ( ( bd._cols == 3 ) && ( bd._rows == 5 ) ) { sol = 14; }
-                if ( ( bd._cols == 3 ) && ( bd._rows == 6 ) ) { sol = 17; }
-                if ( ( bd._cols == 4 ) && ( bd._rows == 4 ) ) { sol = 15; }
+                if ( ( bd._cols == 3 ) && ( bd._rows == 3 ) ) { bestSol = 8; }
+                if ( ( bd._cols == 3 ) && ( bd._rows == 4 ) ) { bestSol = 12; }
+                if ( ( bd._cols == 4 ) && ( bd._rows == 3 ) ) { bestSol = 12; }
+                if ( ( bd._cols == 3 ) && ( bd._rows == 5 ) ) { bestSol = 14; }
+                if ( ( bd._cols == 3 ) && ( bd._rows == 6 ) ) { bestSol = 17; }
+                if ( ( bd._cols == 4 ) && ( bd._rows == 4 ) ) { bestSol = 15; }
                 /* ----------------------------------------- */
 
-                if ( getpid() == parPid ) {
-                    printf( "PID %d: Best solution found visits %d squares (out of %d)\n",
-                            parPid, sol, ( bd._cols * bd._rows ) );
-                    fflush( stdout );
-                }
+                printf( "PID %d: Best solution found visits %d squares (out of %d)\n",
+                        PAR_PID, bestSol, ( bd._cols * bd._rows ) );
+                fflush( stdout );
 
                 freeBoard( &bd );
                 return EXIT_SUCCESS;
-            }// else {
-                /* sol == EXIT_FAILURE */
-            //    fprintf( stderr, "ERROR: knight's tour failed.\n" );
-            //    freeBoard( &bd );
-            //}
+            } else {
+                /* bestSol == EXIT_FAILURE */
+                if ( getpid() != PAR_PID ) { exit( EXIT_FAILURE ); }
+
+                fprintf( stderr, "ERROR: knight's tour failed.\n" );
+                freeBoard( &bd );
+            }
         
         } else {
             /* ( m <= 2 ) || ( n <= 2 ) :: invalid argument values */

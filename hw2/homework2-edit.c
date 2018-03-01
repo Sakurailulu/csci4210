@@ -194,6 +194,7 @@ void tour( Board bd, int * bestSol, int from, int to ) {
                     fflush( stdout );
 #endif
 
+                    // close ( to );
                     int in = read( from, &( sols[i] ), sizeof( int ) );
                     if ( in < 0 ) {
                         fprintf( stderr, "ERROR: read() failed\n" );
@@ -202,28 +203,6 @@ void tour( Board bd, int * bestSol, int from, int to ) {
                         *bestSol = EXIT_FAILURE;
                         exit( EXIT_FAILURE );
                     }
-                    /*if ( WIFEXITED( status ) ) {
-                        // close( to );
-#ifdef DEBUG_MODE
-                        printf( "  reading from %d...\n", from );
-                        fflush( stdout );
-#endif
-                        int in = read( from, &( sols[i] ), sizeof( int ) );
-                        if ( in < 0 ) {
-                            fprintf( stderr, "ERROR: read() failed\n" );
-                            freeBoard( &bd );
-
-                            *bestSol = EXIT_FAILURE;
-                            exit( EXIT_FAILURE );
-                        }
-                    } else {
-                         !WIFEXITED( status )
-                        freeBoard( &bd );
-
-                        *bestSol = EXIT_FAILURE;
-                        exit( EXIT_FAILURE );
-                    }
-#endif */
                 }
             }
 
@@ -233,13 +212,21 @@ void tour( Board bd, int * bestSol, int from, int to ) {
             }
 
             sol = max( poss, sols );
-            if ( getpid() != PAR_PID ) {
-                printf( "PID %d: All child processes terminated; sent %d on pipe to parent\n",
-                        getpid(), sol );
-                fflush( stdout );
-                // exit( EXIT_SUCCESS );
-            }
             *bestSol = ( *bestSol > sol ) ? *bestSol : sol;
+            if ( getpid() != PAR_PID ) {
+                int out = write( to, bestSol, sizeof( int ) );
+                if ( out < 0 ) {
+                    fprintf( stderr, "ERROR: write() failed\n" );
+                    freeBoard( &bd );
+
+                    *bestSol = EXIT_FAILURE;
+                    exit( EXIT_FAILURE );
+                } else {
+                    printf( "PID %d: All child processes terminated; sent %d on pipe to parent\n",
+                            getpid(), *bestSol );
+                    fflush( stdout );
+                }
+            }
         } else {
             /* poss == 1 :: don't fork */
             step( &bd, moves[0] );
@@ -254,14 +241,13 @@ void tour( Board bd, int * bestSol, int from, int to ) {
         printBoard( bd, getpid(), false );
 #endif
 
-        // close( from );
-        int out = write( to, &( bd._moves ), sizeof( int ) );
-        
 #ifdef DEBUG_MODE
         printf( "  writing to %d...\n", to );
         fflush( stdout );
 #endif
-        
+
+        close( from );
+        int out = write( to, &( bd._moves ), sizeof( int ) );
         if ( out < 0 ) {
             fprintf( stderr, "ERROR: write() failed\n" );
             freeBoard( &bd );
