@@ -1,0 +1,18 @@
+PID 3409: Solving the knight's tour problem for a 3x3 board
+PID 3409: 2 moves possible after move #1
+PID 3409:   k..
+PID 3409:   ...
+PID 3409:   ...
+PID 3410: Dead end after move #8
+PID 3410:   kkk
+PID 3410:   k.k
+PID 3410:   kkk
+PID 3410: Sent 8 on pipe to parent
+PID 3411: Dead end after move #8
+PID 3411:   kkk
+PID 3411:   k.k
+PID 3411:   kkk
+PID 3411: Sent 8 on pipe to parent
+PID 3409: Received 8 from child
+PID 3409: Received 8 from child
+PID 3409: Best solution found visits 8 squares (out of 9)

@@ -1,0 +1,768 @@
+PID 2787: Solving the knight's tour problem for a 3x5 board
+PID 2787: 2 moves possible after move #1
+PID 2788: 2 moves possible after move #2
+PID 2789: 3 moves possible after move #3
+PID 2790: 3 moves possible after move #5
+PID 2791: 2 moves possible after move #6
+PID 2792: 2 moves possible after move #8
+PID 2793: Dead end after move #13
+PID 2793: Sent 13 on pipe to parent
+PID 2794: Dead end after move #13
+PID 2794: Sent 13 on pipe to parent
+PID 2792: Received 13 from child
+PID 2792: Received 13 from child
+PID 2792: All child processes terminated; sent 13 on pipe to parent
+PID 2795: Dead end after move #7
+PID 2795: Sent 7 on pipe to parent
+PID 2791: Received 13 from child
+PID 2791: Received 7 from child
+PID 2791: All child processes terminated; sent 13 on pipe to parent
+PID 2796: 2 moves possible after move #6
+PID 2797: 2 moves possible after move #10
+PID 2798: Dead end after move #13
+PID 2798: Sent 13 on pipe to parent
+PID 2799: Dead end after move #11
+PID 2799: Sent 11 on pipe to parent
+PID 2797: Received 13 from child
+PID 2797: Received 11 from child
+PID 2797: All child processes terminated; sent 13 on pipe to parent
+PID 2800: 2 moves possible after move #8
+PID 2801: Dead end after move #11
+PID 2801: Sent 11 on pipe to parent
+PID 2802: Dead end after move #11
+PID 2802: Sent 11 on pipe to parent
+PID 2800: Received 11 from child
+PID 2800: Received 11 from child
+PID 2800: All child processes terminated; sent 11 on pipe to parent
+PID 2796: Received 13 from child
+PID 2796: Received 11 from child
+PID 2796: All child processes terminated; sent 13 on pipe to parent
+PID 2803: Dead end after move #6
+PID 2803: Sent 6 on pipe to parent
+PID 2790: Received 13 from child
+PID 2790: Received 13 from child
+PID 2790: Received 6 from child
+PID 2790: All child processes terminated; sent 13 on pipe to parent
+PID 2804: 2 moves possible after move #4
+PID 2805: 2 moves possible after move #6
+PID 2806: 3 moves possible after move #7
+PID 2807: Dead end after move #8
+PID 2807: Sent 8 on pipe to parent
+PID 2808: 2 moves possible after move #8
+PID 2809: 2 moves possible after move #10
+PID 2810: Dead end after move #11
+PID 2810: Sent 11 on pipe to parent
+PID 2811: Dead end after move #11
+PID 2811: Sent 11 on pipe to parent
+PID 2809: Received 11 from child
+PID 2809: Received 11 from child
+PID 2809: All child processes terminated; sent 11 on pipe to parent
+PID 2812: Dead end after move #9
+PID 2812: Sent 9 on pipe to parent
+PID 2808: Received 11 from child
+PID 2808: Received 9 from child
+PID 2808: All child processes terminated; sent 11 on pipe to parent
+PID 2813: Dead end after move #8
+PID 2813: Sent 8 on pipe to parent
+PID 2806: Received 8 from child
+PID 2806: Received 11 from child
+PID 2806: Received 8 from child
+PID 2806: All child processes terminated; sent 11 on pipe to parent
+PID 2814: 2 moves possible after move #8
+PID 2815: 2 moves possible after move #10
+PID 2816: 2 moves possible after move #11
+PID 2817: Dead end after move #12
+PID 2817: Sent 12 on pipe to parent
+PID 2818: Dead end after move #12
+PID 2818: Sent 12 on pipe to parent
+PID 2816: Received 12 from child
+PID 2816: Received 12 from child
+PID 2816: All child processes terminated; sent 12 on pipe to parent
+PID 2819: Dead end after move #11
+PID 2819: Sent 11 on pipe to parent
+PID 2815: Received 12 from child
+PID 2815: Received 11 from child
+PID 2815: All child processes terminated; sent 12 on pipe to parent
+PID 2820: Dead end after move #9
+PID 2820: Sent 9 on pipe to parent
+PID 2814: Received 12 from child
+PID 2814: Received 9 from child
+PID 2814: All child processes terminated; sent 12 on pipe to parent
+PID 2805: Received 11 from child
+PID 2805: Received 12 from child
+PID 2805: All child processes terminated; sent 12 on pipe to parent
+PID 2821: 2 moves possible after move #6
+PID 2822: 2 moves possible after move #8
+PID 2823: 3 moves possible after move #9
+PID 2824: Dead end after move #10
+PID 2824: Sent 10 on pipe to parent
+PID 2825: 2 moves possible after move #10
+PID 2826: Dead end after move #11
+PID 2826: Sent 11 on pipe to parent
+PID 2827: Dead end after move #11
+PID 2827: Sent 11 on pipe to parent
+PID 2825: Received 11 from child
+PID 2825: Received 11 from child
+PID 2825: All child processes terminated; sent 11 on pipe to parent
+PID 2828: Dead end after move #10
+PID 2828: Sent 10 on pipe to parent
+PID 2823: Received 10 from child
+PID 2823: Received 11 from child
+PID 2823: Received 10 from child
+PID 2823: All child processes terminated; sent 11 on pipe to parent
+PID 2829: Dead end after move #9
+PID 2829: Sent 9 on pipe to parent
+PID 2822: Received 11 from child
+PID 2822: Received 9 from child
+PID 2822: All child processes terminated; sent 11 on pipe to parent
+PID 2830: 2 moves possible after move #8
+PID 2831: Dead end after move #9
+PID 2831: Sent 9 on pipe to parent
+PID 2832: 3 moves possible after move #9
+PID 2833: Dead end after move #10
+PID 2833: Sent 10 on pipe to parent
+PID 2834: 2 moves possible after move #10
+PID 2835: Dead end after move #11
+PID 2835: Sent 11 on pipe to parent
+PID 2836: Dead end after move #11
+PID 2836: Sent 11 on pipe to parent
+PID 2834: Received 11 from child
+PID 2834: Received 11 from child
+PID 2834: All child processes terminated; sent 11 on pipe to parent
+PID 2837: Dead end after move #10
+PID 2837: Sent 10 on pipe to parent
+PID 2832: Received 10 from child
+PID 2832: Received 11 from child
+PID 2832: Received 10 from child
+PID 2832: All child processes terminated; sent 11 on pipe to parent
+PID 2830: Received 9 from child
+PID 2830: Received 11 from child
+PID 2830: All child processes terminated; sent 11 on pipe to parent
+PID 2821: Received 11 from child
+PID 2821: Received 11 from child
+PID 2821: All child processes terminated; sent 11 on pipe to parent
+PID 2804: Received 12 from child
+PID 2804: Received 11 from child
+PID 2804: All child processes terminated; sent 12 on pipe to parent
+PID 2838: 3 moves possible after move #5
+PID 2839: Dead end after move #6
+PID 2839: Sent 6 on pipe to parent
+PID 2840: 2 moves possible after move #6
+PID 2841: 2 moves possible after move #8
+PID 2842: Dead end after move #13
+PID 2842: Sent 13 on pipe to parent
+PID 2843: Dead end after move #13
+PID 2843: Sent 13 on pipe to parent
+PID 2841: Received 13 from child
+PID 2841: Received 13 from child
+PID 2841: All child processes terminated; sent 13 on pipe to parent
+PID 2844: Dead end after move #7
+PID 2844: Sent 7 on pipe to parent
+PID 2840: Received 13 from child
+PID 2840: Received 7 from child
+PID 2840: All child processes terminated; sent 13 on pipe to parent
+PID 2845: 2 moves possible after move #6
+PID 2846: 2 moves possible after move #10
+PID 2847: Dead end after move #13
+PID 2847: Sent 13 on pipe to parent
+PID 2848: Dead end after move #11
+PID 2848: Sent 11 on pipe to parent
+PID 2846: Received 13 from child
+PID 2846: Received 11 from child
+PID 2846: All child processes terminated; sent 13 on pipe to parent
+PID 2849: 2 moves possible after move #8
+PID 2850: Dead end after move #11
+PID 2850: Sent 11 on pipe to parent
+PID 2851: Dead end after move #11
+PID 2851: Sent 11 on pipe to parent
+PID 2849: Received 11 from child
+PID 2849: Received 11 from child
+PID 2849: All child processes terminated; sent 11 on pipe to parent
+PID 2845: Received 13 from child
+PID 2845: Received 11 from child
+PID 2845: All child processes terminated; sent 13 on pipe to parent
+PID 2838: Received 6 from child
+PID 2838: Received 13 from child
+PID 2838: Received 13 from child
+PID 2838: All child processes terminated; sent 13 on pipe to parent
+PID 2789: Received 13 from child
+PID 2789: Received 12 from child
+PID 2789: Received 13 from child
+PID 2789: All child processes terminated; sent 13 on pipe to parent
+PID 2852: 2 moves possible after move #4
+PID 2853: 2 moves possible after move #6
+PID 2854: 2 moves possible after move #8
+PID 2855: 2 moves possible after move #10
+PID 2856: 2 moves possible after move #11
+PID 2857: Dead end after move #14
+PID 2857: Sent 14 on pipe to parent
+PID 2858: Dead end after move #14
+PID 2858: Sent 14 on pipe to parent
+PID 2856: Received 14 from child
+PID 2856: Received 14 from child
+PID 2856: All child processes terminated; sent 14 on pipe to parent
+PID 2859: Dead end after move #11
+PID 2859: Sent 11 on pipe to parent
+PID 2855: Received 14 from child
+PID 2855: Received 11 from child
+PID 2855: All child processes terminated; sent 14 on pipe to parent
+PID 2860: 2 moves possible after move #9
+PID 2861: 2 moves possible after move #11
+PID 2862: 2 moves possible after move #12
+PID 2863: Dead end after move #13
+PID 2863: Sent 13 on pipe to parent
+PID 2864: Dead end after move #13
+PID 2864: Sent 13 on pipe to parent
+PID 2862: Received 13 from child
+PID 2862: Received 13 from child
+PID 2862: All child processes terminated; sent 13 on pipe to parent
+PID 2865: Dead end after move #12
+PID 2865: Sent 12 on pipe to parent
+PID 2861: Received 13 from child
+PID 2861: Received 12 from child
+PID 2861: All child processes terminated; sent 13 on pipe to parent
+PID 2866: 2 moves possible after move #11
+PID 2867: Dead end after move #12
+PID 2867: Sent 12 on pipe to parent
+PID 2868: 2 moves possible after move #12
+PID 2869: Dead end after move #13
+PID 2869: Sent 13 on pipe to parent
+PID 2870: Dead end after move #13
+PID 2870: Sent 13 on pipe to parent
+PID 2868: Received 13 from child
+PID 2868: Received 13 from child
+PID 2868: All child processes terminated; sent 13 on pipe to parent
+PID 2866: Received 12 from child
+PID 2866: Received 13 from child
+PID 2866: All child processes terminated; sent 13 on pipe to parent
+PID 2860: Received 13 from child
+PID 2860: Received 13 from child
+PID 2860: All child processes terminated; sent 13 on pipe to parent
+PID 2854: Received 14 from child
+PID 2854: Received 13 from child
+PID 2854: All child processes terminated; sent 14 on pipe to parent
+PID 2871: 2 moves possible after move #8
+PID 2872: 2 moves possible after move #10
+PID 2873: 2 moves possible after move #11
+PID 2875: Dead end after move #14
+PID 2875: Sent 14 on pipe to parent
+PID 2876: Dead end after move #14
+PID 2876: Sent 14 on pipe to parent
+PID 2873: Received 14 from child
+PID 2873: Received 14 from child
+PID 2873: All child processes terminated; sent 14 on pipe to parent
+PID 2877: Dead end after move #11
+PID 2877: Sent 11 on pipe to parent
+PID 2872: Received 14 from child
+PID 2872: Received 11 from child
+PID 2872: All child processes terminated; sent 14 on pipe to parent
+PID 2878: 2 moves possible after move #9
+PID 2879: 2 moves possible after move #11
+PID 2880: 2 moves possible after move #12
+PID 2881: Dead end after move #13
+PID 2881: Sent 13 on pipe to parent
+PID 2882: Dead end after move #13
+PID 2882: Sent 13 on pipe to parent
+PID 2880: Received 13 from child
+PID 2880: Received 13 from child
+PID 2880: All child processes terminated; sent 13 on pipe to parent
+PID 2883: Dead end after move #12
+PID 2883: Sent 12 on pipe to parent
+PID 2879: Received 13 from child
+PID 2879: Received 12 from child
+PID 2879: All child processes terminated; sent 13 on pipe to parent
+PID 2884: 2 moves possible after move #11
+PID 2885: Dead end after move #12
+PID 2885: Sent 12 on pipe to parent
+PID 2886: 2 moves possible after move #12
+PID 2887: Dead end after move #13
+PID 2887: Sent 13 on pipe to parent
+PID 2888: Dead end after move #13
+PID 2888: Sent 13 on pipe to parent
+PID 2886: Received 13 from child
+PID 2886: Received 13 from child
+PID 2886: All child processes terminated; sent 13 on pipe to parent
+PID 2884: Received 12 from child
+PID 2884: Received 13 from child
+PID 2884: All child processes terminated; sent 13 on pipe to parent
+PID 2878: Received 13 from child
+PID 2878: Received 13 from child
+PID 2878: All child processes terminated; sent 13 on pipe to parent
+PID 2871: Received 14 from child
+PID 2871: Received 13 from child
+PID 2871: All child processes terminated; sent 14 on pipe to parent
+PID 2853: Received 14 from child
+PID 2853: Received 14 from child
+PID 2853: All child processes terminated; sent 14 on pipe to parent
+PID 2889: 3 moves possible after move #5
+PID 2890: 2 moves possible after move #7
+PID 2891: 2 moves possible after move #8
+PID 2892: 2 moves possible after move #12
+PID 2893: Dead end after move #13
+PID 2893: Sent 13 on pipe to parent
+PID 2894: Dead end after move #13
+PID 2894: Sent 13 on pipe to parent
+PID 2892: Received 13 from child
+PID 2892: Received 13 from child
+PID 2892: All child processes terminated; sent 13 on pipe to parent
+PID 2895: 2 moves possible after move #10
+PID 2896: Dead end after move #11
+PID 2896: Sent 11 on pipe to parent
+PID 2897: Dead end after move #13
+PID 2897: Sent 13 on pipe to parent
+PID 2895: Received 11 from child
+PID 2895: Received 13 from child
+PID 2895: All child processes terminated; sent 13 on pipe to parent
+PID 2891: Received 13 from child
+PID 2891: Received 13 from child
+PID 2891: All child processes terminated; sent 13 on pipe to parent
+PID 2898: Dead end after move #8
+PID 2898: Sent 8 on pipe to parent
+PID 2890: Received 13 from child
+PID 2890: Received 8 from child
+PID 2890: All child processes terminated; sent 13 on pipe to parent
+PID 2899: 2 moves possible after move #6
+PID 2900: 2 moves possible after move #8
+PID 2901: 2 moves possible after move #9
+PID 2902: Dead end after move #10
+PID 2902: Sent 10 on pipe to parent
+PID 2903: Dead end after move #10
+PID 2903: Sent 10 on pipe to parent
+PID 2901: Received 10 from child
+PID 2901: Received 10 from child
+PID 2901: All child processes terminated; sent 10 on pipe to parent
+PID 2904: 2 moves possible after move #10
+PID 2905: Dead end after move #11
+PID 2905: Sent 11 on pipe to parent
+PID 2906: Dead end after move #11
+PID 2906: Sent 11 on pipe to parent
+PID 2904: Received 11 from child
+PID 2904: Received 11 from child
+PID 2904: All child processes terminated; sent 11 on pipe to parent
+PID 2900: Received 10 from child
+PID 2900: Received 11 from child
+PID 2900: All child processes terminated; sent 11 on pipe to parent
+PID 2907: 2 moves possible after move #8
+PID 2908: Dead end after move #9
+PID 2908: Sent 9 on pipe to parent
+PID 2909: 2 moves possible after move #10
+PID 2910: Dead end after move #11
+PID 2910: Sent 11 on pipe to parent
+PID 2911: 2 moves possible after move #11
+PID 2912: Dead end after move #12
+PID 2912: Sent 12 on pipe to parent
+PID 2913: Dead end after move #12
+PID 2913: Sent 12 on pipe to parent
+PID 2911: Received 12 from child
+PID 2911: Received 12 from child
+PID 2911: All child processes terminated; sent 12 on pipe to parent
+PID 2909: Received 11 from child
+PID 2909: Received 12 from child
+PID 2909: All child processes terminated; sent 12 on pipe to parent
+PID 2907: Received 9 from child
+PID 2907: Received 12 from child
+PID 2907: All child processes terminated; sent 12 on pipe to parent
+PID 2899: Received 11 from child
+PID 2899: Received 12 from child
+PID 2899: All child processes terminated; sent 12 on pipe to parent
+PID 2914: 2 moves possible after move #7
+PID 2915: Dead end after move #8
+PID 2915: Sent 8 on pipe to parent
+PID 2916: 2 moves possible after move #8
+PID 2917: 2 moves possible after move #12
+PID 2918: Dead end after move #13
+PID 2918: Sent 13 on pipe to parent
+PID 2919: Dead end after move #13
+PID 2919: Sent 13 on pipe to parent
+PID 2917: Received 13 from child
+PID 2917: Received 13 from child
+PID 2917: All child processes terminated; sent 13 on pipe to parent
+PID 2920: 2 moves possible after move #10
+PID 2921: Dead end after move #11
+PID 2921: Sent 11 on pipe to parent
+PID 2922: Dead end after move #13
+PID 2922: Sent 13 on pipe to parent
+PID 2920: Received 11 from child
+PID 2920: Received 13 from child
+PID 2920: All child processes terminated; sent 13 on pipe to parent
+PID 2916: Received 13 from child
+PID 2916: Received 13 from child
+PID 2916: All child processes terminated; sent 13 on pipe to parent
+PID 2914: Received 8 from child
+PID 2914: Received 13 from child
+PID 2914: All child processes terminated; sent 13 on pipe to parent
+PID 2889: Received 13 from child
+PID 2889: Received 12 from child
+PID 2889: Received 13 from child
+PID 2889: All child processes terminated; sent 13 on pipe to parent
+PID 2852: Received 14 from child
+PID 2852: Received 13 from child
+PID 2852: All child processes terminated; sent 14 on pipe to parent
+PID 2788: Received 13 from child
+PID 2788: Received 14 from child
+PID 2788: All child processes terminated; sent 14 on pipe to parent
+PID 2923: 3 moves possible after move #2
+PID 2924: 2 moves possible after move #4
+PID 2925: 3 moves possible after move #5
+PID 2926: 3 moves possible after move #7
+PID 2927: Dead end after move #9
+PID 2927: Sent 9 on pipe to parent
+PID 2928: 2 moves possible after move #8
+PID 2929: Dead end after move #11
+PID 2929: Sent 11 on pipe to parent
+PID 2930: Dead end after move #9
+PID 2930: Sent 9 on pipe to parent
+PID 2928: Received 11 from child
+PID 2928: Received 9 from child
+PID 2928: All child processes terminated; sent 11 on pipe to parent
+PID 2931: Dead end after move #8
+PID 2931: Sent 8 on pipe to parent
+PID 2926: Received 9 from child
+PID 2926: Received 11 from child
+PID 2926: Received 8 from child
+PID 2926: All child processes terminated; sent 11 on pipe to parent
+PID 2932: 2 moves possible after move #6
+PID 2933: 2 moves possible after move #8
+PID 2934: 3 moves possible after move #9
+PID 2935: Dead end after move #10
+PID 2935: Sent 10 on pipe to parent
+PID 2936: Dead end after move #11
+PID 2936: Sent 11 on pipe to parent
+PID 2937: Dead end after move #10
+PID 2937: Sent 10 on pipe to parent
+PID 2934: Received 10 from child
+PID 2934: Received 11 from child
+PID 2934: Received 10 from child
+PID 2934: All child processes terminated; sent 11 on pipe to parent
+PID 2938: Dead end after move #9
+PID 2938: Sent 9 on pipe to parent
+PID 2933: Received 11 from child
+PID 2933: Received 9 from child
+PID 2933: All child processes terminated; sent 11 on pipe to parent
+PID 2939: Dead end after move #7
+PID 2939: Sent 7 on pipe to parent
+PID 2932: Received 11 from child
+PID 2932: Received 7 from child
+PID 2932: All child processes terminated; sent 11 on pipe to parent
+PID 2940: 3 moves possible after move #7
+PID 2941: Dead end after move #8
+PID 2941: Sent 8 on pipe to parent
+PID 2942: Dead end after move #9
+PID 2942: Sent 9 on pipe to parent
+PID 2943: 2 moves possible after move #8
+PID 2944: Dead end after move #11
+PID 2944: Sent 11 on pipe to parent
+PID 2945: Dead end after move #9
+PID 2945: Sent 9 on pipe to parent
+PID 2943: Received 11 from child
+PID 2943: Received 9 from child
+PID 2943: All child processes terminated; sent 11 on pipe to parent
+PID 2940: Received 8 from child
+PID 2940: Received 9 from child
+PID 2940: Received 11 from child
+PID 2940: All child processes terminated; sent 11 on pipe to parent
+PID 2925: Received 11 from child
+PID 2925: Received 11 from child
+PID 2925: Received 11 from child
+PID 2925: All child processes terminated; sent 11 on pipe to parent
+PID 2946: 3 moves possible after move #7
+PID 2947: 2 moves possible after move #9
+PID 2948: 2 moves possible after move #10
+PID 2949: Dead end after move #13
+PID 2949: Sent 13 on pipe to parent
+PID 2950: Dead end after move #11
+PID 2950: Sent 11 on pipe to parent
+PID 2948: Received 13 from child
+PID 2948: Received 11 from child
+PID 2948: All child processes terminated; sent 13 on pipe to parent
+PID 2951: Dead end after move #10
+PID 2951: Sent 10 on pipe to parent
+PID 2947: Received 13 from child
+PID 2947: Received 10 from child
+PID 2947: All child processes terminated; sent 13 on pipe to parent
+PID 2952: 2 moves possible after move #8
+PID 2953: 2 moves possible after move #10
+PID 2954: 2 moves possible after move #11
+PID 2955: Dead end after move #12
+PID 2955: Sent 12 on pipe to parent
+PID 2956: Dead end after move #12
+PID 2956: Sent 12 on pipe to parent
+PID 2954: Received 12 from child
+PID 2954: Received 12 from child
+PID 2954: All child processes terminated; sent 12 on pipe to parent
+PID 2957: Dead end after move #11
+PID 2957: Sent 11 on pipe to parent
+PID 2953: Received 12 from child
+PID 2953: Received 11 from child
+PID 2953: All child processes terminated; sent 12 on pipe to parent
+PID 2958: Dead end after move #9
+PID 2958: Sent 9 on pipe to parent
+PID 2952: Received 12 from child
+PID 2952: Received 9 from child
+PID 2952: All child processes terminated; sent 12 on pipe to parent
+PID 2959: 2 moves possible after move #9
+PID 2960: Dead end after move #10
+PID 2960: Sent 10 on pipe to parent
+PID 2961: 2 moves possible after move #10
+PID 2962: Dead end after move #13
+PID 2962: Sent 13 on pipe to parent
+PID 2963: Dead end after move #11
+PID 2963: Sent 11 on pipe to parent
+PID 2961: Received 13 from child
+PID 2961: Received 11 from child
+PID 2961: All child processes terminated; sent 13 on pipe to parent
+PID 2959: Received 10 from child
+PID 2959: Received 13 from child
+PID 2959: All child processes terminated; sent 13 on pipe to parent
+PID 2946: Received 13 from child
+PID 2946: Received 12 from child
+PID 2946: Received 13 from child
+PID 2946: All child processes terminated; sent 13 on pipe to parent
+PID 2924: Received 11 from child
+PID 2924: Received 13 from child
+PID 2924: All child processes terminated; sent 13 on pipe to parent
+PID 2964: 2 moves possible after move #4
+PID 2965: 2 moves possible after move #6
+PID 2966: 3 moves possible after move #7
+PID 2967: 2 moves possible after move #9
+PID 2968: Dead end after move #13
+PID 2968: Sent 13 on pipe to parent
+PID 2969: Dead end after move #10
+PID 2969: Sent 10 on pipe to parent
+PID 2967: Received 13 from child
+PID 2967: Received 10 from child
+PID 2967: All child processes terminated; sent 13 on pipe to parent
+PID 2970: 2 moves possible after move #8
+PID 2971: Dead end after move #9
+PID 2971: Sent 9 on pipe to parent
+PID 2972: 2 moves possible after move #11
+PID 2973: Dead end after move #12
+PID 2973: Sent 12 on pipe to parent
+PID 2974: Dead end after move #12
+PID 2974: Sent 12 on pipe to parent
+PID 2972: Received 12 from child
+PID 2972: Received 12 from child
+PID 2972: All child processes terminated; sent 12 on pipe to parent
+PID 2970: Received 9 from child
+PID 2970: Received 12 from child
+PID 2970: All child processes terminated; sent 12 on pipe to parent
+PID 2975: 2 moves possible after move #9
+PID 2976: Dead end after move #10
+PID 2976: Sent 10 on pipe to parent
+PID 2977: Dead end after move #13
+PID 2977: Sent 13 on pipe to parent
+PID 2975: Received 10 from child
+PID 2975: Received 13 from child
+PID 2975: All child processes terminated; sent 13 on pipe to parent
+PID 2966: Received 13 from child
+PID 2966: Received 12 from child
+PID 2966: Received 13 from child
+PID 2966: All child processes terminated; sent 13 on pipe to parent
+PID 2978: Dead end after move #7
+PID 2978: Sent 7 on pipe to parent
+PID 2965: Received 13 from child
+PID 2965: Received 7 from child
+PID 2965: All child processes terminated; sent 13 on pipe to parent
+PID 2979: 3 moves possible after move #5
+PID 2980: 3 moves possible after move #7
+PID 2981: 2 moves possible after move #8
+PID 2982: Dead end after move #9
+PID 2982: Sent 9 on pipe to parent
+PID 2983: Dead end after move #10
+PID 2983: Sent 10 on pipe to parent
+PID 2981: Received 9 from child
+PID 2981: Received 10 from child
+PID 2981: All child processes terminated; sent 10 on pipe to parent
+PID 2984: 2 moves possible after move #8
+PID 2985: Dead end after move #9
+PID 2985: Sent 9 on pipe to parent
+PID 2986: Dead end after move #9
+PID 2986: Sent 9 on pipe to parent
+PID 2984: Received 9 from child
+PID 2984: Received 9 from child
+PID 2984: All child processes terminated; sent 9 on pipe to parent
+PID 2987: Dead end after move #8
+PID 2987: Sent 8 on pipe to parent
+PID 2980: Received 10 from child
+PID 2980: Received 9 from child
+PID 2980: Received 8 from child
+PID 2980: All child processes terminated; sent 10 on pipe to parent
+PID 2988: 2 moves possible after move #8
+PID 2989: Dead end after move #9
+PID 2989: Sent 9 on pipe to parent
+PID 2990: 3 moves possible after move #9
+PID 2991: Dead end after move #10
+PID 2991: Sent 10 on pipe to parent
+PID 2992: 2 moves possible after move #10
+PID 2993: Dead end after move #11
+PID 2993: Sent 11 on pipe to parent
+PID 2994: Dead end after move #11
+PID 2994: Sent 11 on pipe to parent
+PID 2992: Received 11 from child
+PID 2992: Received 11 from child
+PID 2992: All child processes terminated; sent 11 on pipe to parent
+PID 2995: Dead end after move #10
+PID 2995: Sent 10 on pipe to parent
+PID 2990: Received 10 from child
+PID 2990: Received 11 from child
+PID 2990: Received 10 from child
+PID 2990: All child processes terminated; sent 11 on pipe to parent
+PID 2988: Received 9 from child
+PID 2988: Received 11 from child
+PID 2988: All child processes terminated; sent 11 on pipe to parent
+PID 2996: 3 moves possible after move #7
+PID 2997: Dead end after move #8
+PID 2997: Sent 8 on pipe to parent
+PID 2998: 2 moves possible after move #8
+PID 2999: Dead end after move #9
+PID 2999: Sent 9 on pipe to parent
+PID 3000: Dead end after move #10
+PID 3000: Sent 10 on pipe to parent
+PID 2998: Received 9 from child
+PID 2998: Received 10 from child
+PID 2998: All child processes terminated; sent 10 on pipe to parent
+PID 3001: 2 moves possible after move #8
+PID 3002: Dead end after move #9
+PID 3002: Sent 9 on pipe to parent
+PID 3003: Dead end after move #9
+PID 3003: Sent 9 on pipe to parent
+PID 3001: Received 9 from child
+PID 3001: Received 9 from child
+PID 3001: All child processes terminated; sent 9 on pipe to parent
+PID 2996: Received 8 from child
+PID 2996: Received 10 from child
+PID 2996: Received 9 from child
+PID 2996: All child processes terminated; sent 10 on pipe to parent
+PID 2979: Received 10 from child
+PID 2979: Received 11 from child
+PID 2979: Received 10 from child
+PID 2979: All child processes terminated; sent 11 on pipe to parent
+PID 2964: Received 13 from child
+PID 2964: Received 11 from child
+PID 2964: All child processes terminated; sent 13 on pipe to parent
+PID 3004: 2 moves possible after move #4
+PID 3005: 2 moves possible after move #6
+PID 3006: 3 moves possible after move #7
+PID 3007: 2 moves possible after move #9
+PID 3008: 2 moves possible after move #10
+PID 3009: Dead end after move #11
+PID 3009: Sent 11 on pipe to parent
+PID 3010: Dead end after move #12
+PID 3010: Sent 12 on pipe to parent
+PID 3008: Received 11 from child
+PID 3008: Received 12 from child
+PID 3008: All child processes terminated; sent 12 on pipe to parent
+PID 3011: Dead end after move #10
+PID 3011: Sent 10 on pipe to parent
+PID 3007: Received 12 from child
+PID 3007: Received 10 from child
+PID 3007: All child processes terminated; sent 12 on pipe to parent
+PID 3012: 2 moves possible after move #10
+PID 3013: Dead end after move #11
+PID 3013: Sent 11 on pipe to parent
+PID 3014: 2 moves possible after move #11
+PID 3015: Dead end after move #12
+PID 3015: Sent 12 on pipe to parent
+PID 3016: Dead end after move #12
+PID 3016: Sent 12 on pipe to parent
+PID 3014: Received 12 from child
+PID 3014: Received 12 from child
+PID 3014: All child processes terminated; sent 12 on pipe to parent
+PID 3012: Received 11 from child
+PID 3012: Received 12 from child
+PID 3012: All child processes terminated; sent 12 on pipe to parent
+PID 3017: 2 moves possible after move #9
+PID 3018: Dead end after move #10
+PID 3018: Sent 10 on pipe to parent
+PID 3019: 2 moves possible after move #10
+PID 3020: Dead end after move #11
+PID 3020: Sent 11 on pipe to parent
+PID 3021: Dead end after move #12
+PID 3021: Sent 12 on pipe to parent
+PID 3019: Received 11 from child
+PID 3019: Received 12 from child
+PID 3019: All child processes terminated; sent 12 on pipe to parent
+PID 3017: Received 10 from child
+PID 3017: Received 12 from child
+PID 3017: All child processes terminated; sent 12 on pipe to parent
+PID 3006: Received 12 from child
+PID 3006: Received 12 from child
+PID 3006: Received 12 from child
+PID 3006: All child processes terminated; sent 12 on pipe to parent
+PID 3022: Dead end after move #7
+PID 3022: Sent 7 on pipe to parent
+PID 3005: Received 12 from child
+PID 3005: Received 7 from child
+PID 3005: All child processes terminated; sent 12 on pipe to parent
+PID 3023: 3 moves possible after move #5
+PID 3024: 3 moves possible after move #7
+PID 3025: Dead end after move #11
+PID 3025: Sent 11 on pipe to parent
+PID 3026: 2 moves possible after move #8
+PID 3027: Dead end after move #9
+PID 3027: Sent 9 on pipe to parent
+PID 3028: Dead end after move #9
+PID 3028: Sent 9 on pipe to parent
+PID 3026: Received 9 from child
+PID 3026: Received 9 from child
+PID 3026: All child processes terminated; sent 9 on pipe to parent
+PID 3029: Dead end after move #8
+PID 3029: Sent 8 on pipe to parent
+PID 3024: Received 11 from child
+PID 3024: Received 9 from child
+PID 3024: Received 8 from child
+PID 3024: All child processes terminated; sent 11 on pipe to parent
+PID 3030: 2 moves possible after move #6
+PID 3031: Dead end after move #7
+PID 3031: Sent 7 on pipe to parent
+PID 3032: 3 moves possible after move #9
+PID 3033: Dead end after move #10
+PID 3033: Sent 10 on pipe to parent
+PID 3034: 2 moves possible after move #10
+PID 3035: Dead end after move #11
+PID 3035: Sent 11 on pipe to parent
+PID 3036: Dead end after move #11
+PID 3036: Sent 11 on pipe to parent
+PID 3034: Received 11 from child
+PID 3034: Received 11 from child
+PID 3034: All child processes terminated; sent 11 on pipe to parent
+PID 3037: Dead end after move #10
+PID 3037: Sent 10 on pipe to parent
+PID 3032: Received 10 from child
+PID 3032: Received 11 from child
+PID 3032: Received 10 from child
+PID 3032: All child processes terminated; sent 11 on pipe to parent
+PID 3030: Received 7 from child
+PID 3030: Received 11 from child
+PID 3030: All child processes terminated; sent 11 on pipe to parent
+PID 3038: 3 moves possible after move #7
+PID 3039: Dead end after move #8
+PID 3039: Sent 8 on pipe to parent
+PID 3040: Dead end after move #11
+PID 3040: Sent 11 on pipe to parent
+PID 3041: 2 moves possible after move #8
+PID 3042: Dead end after move #9
+PID 3042: Sent 9 on pipe to parent
+PID 3043: Dead end after move #9
+PID 3043: Sent 9 on pipe to parent
+PID 3041: Received 9 from child
+PID 3041: Received 9 from child
+PID 3041: All child processes terminated; sent 9 on pipe to parent
+PID 3038: Received 8 from child
+PID 3038: Received 11 from child
+PID 3038: Received 9 from child
+PID 3038: All child processes terminated; sent 11 on pipe to parent
+PID 3023: Received 11 from child
+PID 3023: Received 11 from child
+PID 3023: Received 11 from child
+PID 3023: All child processes terminated; sent 11 on pipe to parent
+PID 3004: Received 12 from child
+PID 3004: Received 11 from child
+PID 3004: All child processes terminated; sent 12 on pipe to parent
+PID 2923: Received 13 from child
+PID 2923: Received 13 from child
+PID 2923: Received 12 from child
+PID 2923: All child processes terminated; sent 13 on pipe to parent
+PID 2787: Received 14 from child
+PID 2787: Received 13 from child
+PID 2787: Best solution found visits 14 squares (out of 15)

@@ -1,0 +1,9 @@
+PID 22859: Solving the knight's tour problem for a 3x3 board
+PID 22859: 2 moves possible after move #1
+PID 22860: Dead end after move #8
+PID 22860: Sent 8 on pipe to parent
+PID 22861: Dead end after move #8
+PID 22861: Sent 8 on pipe to parent
+PID 22859: Received 8 from child
+PID 22859: Received 8 from child
+PID 22859: Best solution found visits 8 squares (out of 9)
