@@ -321,10 +321,13 @@ int main( int argc, char * argv[] ) {
             fflush( stdout );
 
             tour( bd, &sol, 0, 0 );
-            if ( getpid() != PAR_PID ) { exit( EXIT_SUCCESS ); }
 
             /* Print solution, free memory, and exit. */
             if ( sol != EXIT_FAILURE ) {
+                if ( getpid() != PAR_PID ) {
+                    freeBoard( &bd );
+                    exit( EXIT_SUCCESS );
+                }
                 printf( "PID %d: Best solution found visits %d squares (out of %d)\n",
                         PAR_PID, sol, ( bd._cols * bd._rows ) );
                 fflush( stdout );
@@ -333,6 +336,11 @@ int main( int argc, char * argv[] ) {
                 return EXIT_SUCCESS;
             } else {
                 /* sol == EXIT_FAILURE */
+                if ( getpid() != PAR_PID ) {
+                    freeBoard( &bd );
+                    exit( EXIT_FAILURE );
+                }
+
                 fprintf( stderr, "ERROR: knight's tour failed.\n" );
                 freeBoard( &bd );
             }
