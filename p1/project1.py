@@ -19,8 +19,8 @@
 """
 
 from __future__ import print_function
-from collections import defaultdict as d_dict
-from collections import OrderedDict as o_dict
+from collections import defaultdict as dd
+from collections import deque as dq
 import os
 import sys
 
@@ -29,7 +29,6 @@ RR_ADD = False
 
 # Used to print debugging output. #
 DEBUG = False
-
 
 # ---------------------------------------------------------------------------- #
 
@@ -45,8 +44,8 @@ def err( *args, **kwargs ):
 """
 Helper method to read in file input.
 :param:     f_name, file name to find in directory and read.
-:return:    d_dict of process id mapped to tuple of details, if successful
-            os.EX_IOERR, if file fails, ex.EX_DATAERR, is file is not formatted
+:return:    dd of process id mapped to tuple of details, if successful
+            os.EX_IOERR, if file fails, ex.EX_DATAERR, if file is not formatted
 """
 def read_file( f_name ):
     pwd = os.path.dirname( __file__ )
@@ -55,17 +54,16 @@ def read_file( f_name ):
     try:
         f = open( path, 'r' )
     except:
-        err( "ERROR: Could not open file" )
         return os.EX_IOERR
 
-    procs = d_dict( tuple )
+    procs = dd( tuple )
     for line in f:
         if ( line[0] != '#' ):
             line = line.strip().split('|')
             try:
                 procs[ line[0] ] = tuple([ int(line[i]) for i in range(1, 5) ])
             except:
-                err( "ERROR: Invalid input file format" )
+                f.close()
                 return os.EX_DATAERR
 
     f.close()
@@ -74,71 +72,71 @@ def read_file( f_name ):
 
 """
 Helper method to print scheduling results.
-:param:     res, d_dict to print.
+:param:     res, dd to print.
+            lines, list to write to simple output file.
 """
-def print_res( res ):
-    print( "-- average CPU burst time: {} ms".format(res[0]) )
-    print( "-- average wait time: {} ms".format(res[1]) )
-    print( "-- average turnaround time: {} ms".format(res[2]) )
-    print( "-- total number of context switches: {}".format(res[3]) )
-    print( "-- total number of preemptions: {}".format(res[4]) )
+def write_res( res, lines ):
+    lines.append( "-- average CPU burst time: {0:.2f} ms\n".format(res[0]) )
+    lines.append( "-- average wait time: {0:.2f} ms\n".format(res[1]) )
+    lines.append( "-- average turnaround time: {0:.2f} ms\n".format(res[2]) )
+    lines.append( "-- total number of context switches: {}\n".format(res[3]) )
+    lines.append( "-- total number of preemptions: {}\n".format(res[4]) )
+
+    return lines
 
 
 """
 Simulator for FCFS algorithm.
-:param:     procs, d_dict of processes to simulate.
-:return:    d_dict of simulation results.
+:param:     procs, dd of processes to simulate.
+:return:    dd of simulation results.
 """
 def fcfs( procs ):
     if DEBUG:
         print( "\nFCFS" )
 
-    res = d_dict( int )
+    ticker = 0
+    res = dd( int )
     for i in range(5):
         res[i] = 0
 
-    ''' comp = lambda item: item[1][0]
-    ordered = o_dict()
-    for pair in sorted( procs.items(), key = comp ):
-        ordered[ pair[0] ] = pair[1]
-
-    if DEBUG:
-        for key, val in ordered.items():
-            print( "  {} -> {}".format(key, val) ) '''
-
+    print( "time {}ms: Simulator ended for FCFS".format(ticker) )
     return res
 
 
 """
 Simulator for SRT algorithm.
-:param:     procs, d_dict of processes to simulate.
-:return:    d_dict of simulation results.
+:param:     procs, dd of processes to simulate.
+:return:    dd of simulation results.
 """
 def srt( procs ):
     if DEBUG:
         print( "\nSRT" )
 
-    res = d_dict( int )
+    ticker = 0
+    res = dd( int )
     for i in range(5):
         res[i] = 0
 
+    print( "time {}ms: Simulator ended for SRT".format(ticker) )
     return res
 
 
 """
 Simulator for RR algorithm.
-:param:     procs, d_dict of processes to simulate.
+:param:     procs, dd of processes to simulate.
             add, RR_ADD global to determine queue addtion.
-:return:    d_dict of simulation results.
+:return:    dd of simulation results.
 """
 def rr( procs, add=False ):
     if DEBUG:
         print( "\nRR" )
 
-    res = d_dict( int )
+    ticker = 0
+    res = dd( int )
     for i in range(5):
         res[i] = 0
 
+    print( "time {}ms: Simulator ended for RR".format(ticker) )
     return res
 
 
@@ -157,27 +155,40 @@ if ( __name__ == "__main__" ):
 
         procs = read_file( sys.argv[1] )
 
-        # make sure that read_file() didn't return an error #
-        if ( isinstance(procs, d_dict) ):
+        # Make sure that read_file() didn't return an error. #
+        if ( isinstance(procs, dd) ):
             if ( DEBUG ):
                 print( "procs = " )
                 for key, val in procs.items():
                     print( "  {} -> {}".format(key, val) )
 
-            # Print FCFS results. #
             fcfs_res = fcfs( procs )
-            print( "Algorithm FCFS" )
-            print_res( fcfs_res )
-
-            # Print SRT results. #
             srt_res = srt( procs )
-            print( "Algorithm SRT" )
-            print_res( srt_res )
-
-            # Print RR results. #
             rr_res = rr( procs, RR_ADD )
-            print( "Algorithm RR" )
-            print_res( rr_res )
+
+            lines = []
+
+            # Write FCFS results. #
+            lines.append( "Algorithm FCFS\n" )
+            lines = write_res( fcfs_res, lines )
+
+            # Write SRT results. #
+            lines.append( "Algorithm SRT\n" )
+            lines = write_res( srt_res, lines )
+
+            # Write RR results. #
+            lines.append( "Algorithm RR\n" )
+            lines = write_res( rr_res, lines )
+
+            pwd = os.path.dirname( __file__ )
+            path = os.path.join( pwd, sys.argv[2] )
+            try:
+                f = open( path, 'w' )
+            except:
+                sys.exit( "ERROR: Could not write to output file." )
+            
+            f.writelines( lines )
+            f.close()
 
             sys.exit()
 
