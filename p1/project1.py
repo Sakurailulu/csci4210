@@ -21,6 +21,7 @@ class Process:
     def __init__( self, pid, arrival, burst, num, io ):
         # Helper details. #
         self._start = arrival                   # most recent start time #
+        self._readied = arrival                 # most recent time added to ready #
 
         # Details taken from input file. #
         self._pid = pid
@@ -108,15 +109,17 @@ class CPU:
         self._context += 1
         self._ticker += t_cs // 2
         self._curr = proc
+        self._total_wait += ( self._ticker - (self._curr)._readied )
 
 
     """
     Removes running process from _curr.
     """
     def remove( self ):
-        self._total_turnaround += ( self._ticker - (self._curr)._start )
+        arrived = (self._curr)._start
         self._ticker += t_cs // 2
         self._curr = None
+        return arrived
 
     # ------------------------------------------------------------------------ #
     # Overridden methods #
@@ -176,7 +179,6 @@ def read_file( f_name ):
             try:
                 tmp = [ int(line[i]) for i in range(1, 5) ]
                 procs.append( Process(line[0], tmp[0], tmp[1], tmp[2], tmp[3]) )
-                # procs[ line[0] ] = tuple([ int(line[i]) for i in range(1, 5) ])
             except:
                 f.close()
                 return os.EX_DATAERR
@@ -207,26 +209,21 @@ def run_fcfs( procs ):
     print( "time {}ms: Simulator started for FCFS {}".format(cpu._ticker, \
             cpu.queue()) )
 
-    while len( cpu._finished ) != n:
+    while 1:
+        removed = False
         if ( cpu._curr != None ):
             # Check for finished process. #
             if ( ( cpu._ticker - (cpu._curr)._start ) == (cpu._curr)._burst ):
                 (cpu._curr)._num -= 1
                 if ( (cpu._curr)._num > 0 ):
-                    if ( (cpu._curr)._num == 1 ):
-                        print( "time {}ms: Process {} completed a CPU burst; {} burst to go {}".format(\
-                                cpu._ticker, (cpu._curr)._pid, (cpu._curr)._num, cpu.queue()) )
-
-                    else:
-                        # (cpu._curr)._num > 1 #
-                        print( "time {}ms: Process {} completed a CPU burst; {} bursts to go {}".format(\
-                                cpu._ticker, (cpu._curr)._pid, (cpu._curr)._num, cpu.queue()) )
+                    print( "time {}ms: Process {} completed a CPU burst; {} burst{} to go {}".format( \
+                            cpu._ticker, (cpu._curr)._pid, (cpu._curr)._num, \
+                            ('s' if (cpu._curr)._num != 1 else ''), cpu.queue() ) )
 
                     cpu._io[cpu._curr] = ( cpu._ticker + (cpu._curr)._io + (t_cs // 2) )
                     print( "time {}ms: Process {} switching out of CPU; will block on I/O until time {}ms {}".format( \
                             cpu._ticker, (cpu._curr)._pid, cpu._io[cpu._curr], \
                             cpu.queue() ) )
-                    print( cpu._io )
 
                 else:
                     # (cpu._curr)._num <= 0 #
@@ -234,20 +231,11 @@ def run_fcfs( procs ):
                             (cpu._curr)._pid, cpu.queue()) )
                     cpu._finished[cpu._curr] = cpu._ticker
 
-                cpu.remove()
-                #cpu._total_turnaround += cpu._ticker
-
-        '''else:
-            # cpu._curr == None #
-            if ( cpu._ready ):
-                cpu.add( (cpu._ready).popleft() )
-                (cpu._curr)._start = cpu._ticker
-                print( "time {}ms: Process {} started using the CPU {}".format(\
-                        cpu._ticker, (cpu._curr)._pid, cpu.queue()) )'''
+                removed = True
 
         io_done = [ proc for proc, tick in (cpu._io).items() if tick == cpu._ticker ]
-        if len(io_done) > 1: print(io_done)
         for proc in sorted( io_done ):
+            proc._readied = cpu._ticker
             (cpu._ready).append( proc )
             del cpu._io[proc]
             print( "time {}ms: Process {} completed I/O; added to ready queue {}".format(\
@@ -255,21 +243,29 @@ def run_fcfs( procs ):
 
         for proc in cpu._procs:
             if ( proc._arrival == cpu._ticker ):
+                proc._readied = cpu._ticker
                 (cpu._ready).append( proc )
                 print( "time {}ms: Process {} arrived and added to ready queue {}".format(\
                         cpu._ticker, proc._pid, cpu.queue()) )
 
+        if ( removed ):
+            arrived = cpu.remove()
+            cpu._total_turnaround += ( cpu._ticker - arrived )
+
         if ( cpu._curr == None ):
-            # cpu._curr == None #
             if ( cpu._ready ):
                 cpu.add( (cpu._ready).popleft() )
                 (cpu._curr)._start = cpu._ticker
                 print( "time {}ms: Process {} started using the CPU {}".format(\
                         cpu._ticker, (cpu._curr)._pid, cpu.queue()) )
 
+        if ( len(cpu._finished) == n ):
+            break
+        
         cpu._ticker += 1
 
     print( "time {}ms: Simulator ended for FCFS\n".format(cpu._ticker) )
+    print( cpu._total_turnaround, cpu._total_num )
     avg_turnaround = cpu._total_turnaround / cpu._total_num
     avg_wait = cpu._total_wait / cpu._total_num
     return ( cpu._avg_burst, avg_wait, avg_turnaround, \
