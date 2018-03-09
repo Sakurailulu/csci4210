@@ -1,6 +1,7 @@
 from __future__ import print_function
 from collections import defaultdict as ddict
 from collections import deque
+import copy
 import os
 import sys
 
@@ -38,20 +39,19 @@ class Process:
     :return:    raw representation of all data in Process object.
     """
     def __repr__( self ):
-        repr_rep = "_pid = {}; _arrival = {}; ".format( self._pid, self._arrival )
-        repr_rep += "_burst = {}; _num = {}; _io = {}".format( self._burst, self._num, self._io )
+        repr_rep = "Process(_pid = {}, _arrival = {}, ".format( \
+                self._pid, self._arrival )
+        repr_rep += "_burst = {}, _num = {}, _io = {})".format( \
+                self._burst, self._num, self._io )
         return repr_rep
 
 
     """
     String representation of Process.
-    :return:    string detailing Process info.
+    :return:    string detailing with Process pid and arrival time.
     """
     def __str__( self ):
-        str_rep = "Process {} arrives at {}ms ".format( self._pid, self._arrival )
-        str_rep += "and performs {} bursts of {}ms with ".format( self._num, self._burst )
-        str_rep += "{}ms of IO.".format( self._io )
-        return str_rep
+        return "proc. {} @ {}ms ".format( self._pid, self._arrival )
 
 
 """
@@ -63,7 +63,7 @@ class CPU:
     """
     def __init__( self, procs ):
         # Helper details. #
-        self._procs = procs
+        self._procs = procs                     # processes found in input file #
         self._total_turnaround = 0              # total turnaround time #
         self._total_wait = 0                    # total wait time #
         self._total_num = sum( [ proc._num for proc in self._procs ] )
@@ -75,7 +75,6 @@ class CPU:
         self._preempt = 0
 
         # Process scheduling details. #
-        self._procs = procs                     # processes found in input file #
         self._ticker = 0                        # time ticker #
         self._curr = None                       # running process #
         self._ready = deque()                   # ready queue for processes #
@@ -89,7 +88,7 @@ class CPU:
     String representation of CPU ready queue.
     :return:    string in the format of '[Q *contents of _ready*]
     """
-    def queue( self ):
+    def get_queue( self ):
         contents = "[Q"
         for proc in self._ready:
             contents += ' ' + proc._pid
@@ -116,10 +115,9 @@ class CPU:
     Removes running process from _curr.
     """
     def remove( self ):
-        arrived = (self._curr)._start
         self._ticker += t_cs // 2
+        self._total_turnaround += ( self._ticker - (self._curr)._start )
         self._curr = None
-        return arrived
 
     # ------------------------------------------------------------------------ #
     # Overridden methods #
@@ -129,11 +127,12 @@ class CPU:
     :return:    raw representation of all data in CPU object.
     """
     def __repr__( self ):
-        repr_rep = "_ticker = {}, _curr = {} deque(["
+        repr_rep = "CPU(_ticker = {}, _curr = {}, _ready = deque([".format( \
+                self._ticker, (self._curr)._pid )
         for proc in self._ready:
             repr_rep += "{}, ".format( proc._pid )
 
-        return repr_rep[ :-2 ] + "])"
+        return repr_rep[ :-2 ] + "]))"
 
 
     """
@@ -141,10 +140,8 @@ class CPU:
     :return: string with time, current process, and string rep of ready queue.
     """
     def __str__( self ):
-        str_rep = "Time {}: current process is {} ".format( self._ticker, self._curr._id )
-        str_rep += "with ready queue {}".format( self.queue() )
-
-        return str_rep
+        return "{}ms: running {}, ready {}".format( self._ticker, self._curr._id, \
+                self.get_queue() )
 
 # ---------------------------------------------------------------------------- #
 
@@ -188,6 +185,10 @@ def read_file( f_name ):
 
 
 """
+Builds simple output file list.
+:param:     lines, list with existing lines
+            res, results from process scheduling
+:return:    list with lines of output related to 'res' appended to end.
 """
 def build_simple( lines, res ):
     lines.append( "-- average CPU burst time: {0:.2f} ms\n".format(res[0]) )
@@ -205,9 +206,9 @@ First come, first serve simulation.
 :return:    five-tuple with simple output tracking variables.
 """
 def run_fcfs( procs ):
-    cpu = CPU( procs )
+    cpu = CPU( copy.deepcopy(procs) )
     print( "time {}ms: Simulator started for FCFS {}".format(cpu._ticker, \
-            cpu.queue()) )
+            cpu.get_queue()) )
 
     while 1:
         removed = False
@@ -218,17 +219,17 @@ def run_fcfs( procs ):
                 if ( (cpu._curr)._num > 0 ):
                     print( "time {}ms: Process {} completed a CPU burst; {} burst{} to go {}".format( \
                             cpu._ticker, (cpu._curr)._pid, (cpu._curr)._num, \
-                            ('s' if (cpu._curr)._num != 1 else ''), cpu.queue() ) )
+                            ('s' if (cpu._curr)._num != 1 else ''), cpu.get_queue() ) )
 
                     cpu._io[cpu._curr] = ( cpu._ticker + (cpu._curr)._io + (t_cs // 2) )
                     print( "time {}ms: Process {} switching out of CPU; will block on I/O until time {}ms {}".format( \
                             cpu._ticker, (cpu._curr)._pid, cpu._io[cpu._curr], \
-                            cpu.queue() ) )
+                            cpu.get_queue() ) )
 
                 else:
                     # (cpu._curr)._num <= 0 #
                     print( "time {}ms: Process {} terminated {}".format(cpu._ticker, \
-                            (cpu._curr)._pid, cpu.queue()) )
+                            (cpu._curr)._pid, cpu.get_queue()) )
                     cpu._finished[cpu._curr] = cpu._ticker
 
                 removed = True
@@ -239,25 +240,24 @@ def run_fcfs( procs ):
             (cpu._ready).append( proc )
             del cpu._io[proc]
             print( "time {}ms: Process {} completed I/O; added to ready queue {}".format(\
-                    cpu._ticker, proc._pid, cpu.queue()) )
+                    cpu._ticker, proc._pid, cpu.get_queue()) )
 
         for proc in cpu._procs:
             if ( proc._arrival == cpu._ticker ):
                 proc._readied = cpu._ticker
                 (cpu._ready).append( proc )
                 print( "time {}ms: Process {} arrived and added to ready queue {}".format(\
-                        cpu._ticker, proc._pid, cpu.queue()) )
+                        cpu._ticker, proc._pid, cpu.get_queue()) )
 
         if ( removed ):
-            arrived = cpu.remove()
-            cpu._total_turnaround += ( cpu._ticker - arrived )
+            cpu.remove()
 
         if ( cpu._curr == None ):
             if ( cpu._ready ):
                 cpu.add( (cpu._ready).popleft() )
                 (cpu._curr)._start = cpu._ticker
                 print( "time {}ms: Process {} started using the CPU {}".format(\
-                        cpu._ticker, (cpu._curr)._pid, cpu.queue()) )
+                        cpu._ticker, (cpu._curr)._pid, cpu.get_queue()) )
 
         if ( len(cpu._finished) == n ):
             break
@@ -265,7 +265,6 @@ def run_fcfs( procs ):
         cpu._ticker += 1
 
     print( "time {}ms: Simulator ended for FCFS\n".format(cpu._ticker) )
-    print( cpu._total_turnaround, cpu._total_num )
     avg_turnaround = cpu._total_turnaround / cpu._total_num
     avg_wait = cpu._total_wait / cpu._total_num
     return ( cpu._avg_burst, avg_wait, avg_turnaround, \
@@ -278,8 +277,8 @@ Shortest remaining time simulation.
 :return:    five-tuple with simple output tracking variables.
 """
 def run_srt( procs ):
-    cpu = CPU( procs )
-    print( "time {}ms: Simulator started for SRT {}".format(cpu._ticker, cpu.queue()) )
+    cpu = CPU( copy.deepcopy(procs) )
+    print( "time {}ms: Simulator started for SRT {}".format(cpu._ticker, cpu.get_queue()) )
     
     print( "time {}ms: Simulator ended for SRT\n".format(cpu._ticker) )
     avg_turnaround = cpu._total_turnaround / cpu._total_num
@@ -294,8 +293,8 @@ Round robin simulation.
 :return:    five-tuple with simple output tracking variables.
 """
 def run_rr( procs ):
-    cpu = CPU( procs )
-    print( "time {}ms: Simulator started for RR {}".format(cpu._ticker, cpu.queue()) )
+    cpu = CPU( copy.deepcopy(procs) )
+    print( "time {}ms: Simulator started for RR {}".format(cpu._ticker, cpu.get_queue()) )
     
     print( "time {}ms: Simulator ended for RR".format(cpu._ticker) )
     avg_turnaround = cpu._total_turnaround / cpu._total_num
