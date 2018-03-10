@@ -106,9 +106,9 @@ class CPU:
     """
     def add( self, proc ):
         self._context += 1
-        self._ticker += t_cs // 2
         self._curr = proc
         self._total_wait += ( self._ticker - (self._curr)._readied )
+        self._ticker += t_cs // 2
 
 
     """
@@ -116,7 +116,7 @@ class CPU:
     """
     def remove( self ):
         self._ticker += t_cs // 2
-        self._total_turnaround += ( self._ticker - (self._curr)._start )
+        self._total_turnaround += ( self._ticker - (self._curr)._readied )
         self._curr = None
 
     # ------------------------------------------------------------------------ #
