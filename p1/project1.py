@@ -23,6 +23,7 @@ class Process:
         # Helper details. #
         self._start = arrival                   # most recent start time #
         self._readied = arrival                 # most recent time added to ready #
+        self._remaining = burst                 # remaining time for burst #
 
         # Details taken from input file. #
         self._pid = pid
@@ -119,6 +120,16 @@ class CPU:
         self._total_turnaround += ( self._ticker - (self._curr)._readied )
         self._curr = None
 
+
+    """
+    """
+    def preempt( self, proc ):
+        (self._ready).appendleft( self._curr )
+        self.remove()
+        self.add( proc )
+        (self._curr)._remaining -= 1
+        self._preempt += 1
+
     # ------------------------------------------------------------------------ #
     # Overridden methods #
     
@@ -214,7 +225,7 @@ def run_fcfs( procs ):
         removed = False
         if ( cpu._curr != None ):
             # Check for finished process. #
-            if ( ( cpu._ticker - (cpu._curr)._start ) == (cpu._curr)._burst ):
+            if ( (cpu._curr)._remaining <= 0 ):
                 (cpu._curr)._num -= 1
                 if ( (cpu._curr)._num > 0 ):
                     print( "time {}ms: Process {} completed a CPU burst; {} burst{} to go {}".format( \
@@ -234,8 +245,13 @@ def run_fcfs( procs ):
 
                 removed = True
 
-        io_done = [ proc for proc, tick in (cpu._io).items() if tick == cpu._ticker ]
-        for proc in sorted( io_done ):
+            else:
+                # (cpu._curr)._remaining > 0 #
+                (cpu._curr)._remaining -= 1
+
+        io_done = sorted( [ proc for proc, tick in (cpu._io).items() if tick == cpu._ticker ],
+                key = lambda obj : obj._pid )
+        for proc in io_done:
             proc._readied = cpu._ticker
             (cpu._ready).append( proc )
             del cpu._io[proc]
@@ -256,6 +272,7 @@ def run_fcfs( procs ):
             if ( cpu._ready ):
                 cpu.add( (cpu._ready).popleft() )
                 (cpu._curr)._start = cpu._ticker
+                (cpu._curr)._remaining = ( (cpu._curr)._burst - 1 )
                 print( "time {}ms: Process {} started using the CPU {}".format(\
                         cpu._ticker, (cpu._curr)._pid, cpu.get_queue()) )
 
@@ -279,6 +296,109 @@ Shortest remaining time simulation.
 def run_srt( procs ):
     cpu = CPU( copy.deepcopy(procs) )
     print( "time {}ms: Simulator started for SRT {}".format(cpu._ticker, cpu.get_queue()) )
+
+    while 1:
+        removed = False
+        if ( cpu._curr != None ):
+            # Check for finished process. #
+            if ( (cpu._curr)._remaining <= 0 ):
+                (cpu._curr)._num -= 1
+                if ( (cpu._curr)._num > 0 ):
+                    print( "time {}ms: Process {} completed a CPU burst; {} burst{} to go {}".format( \
+                            cpu._ticker, (cpu._curr)._pid, (cpu._curr)._num, \
+                            ('s' if (cpu._curr)._num != 1 else ''), cpu.get_queue() ) )
+
+                    (cpu._curr)._remaining = (cpu._curr)._burst
+                    cpu._io[cpu._curr] = ( cpu._ticker + (cpu._curr)._io + (t_cs // 2) )
+                    print( "time {}ms: Process {} switching out of CPU; will block on I/O until time {}ms {}".format( \
+                            cpu._ticker, (cpu._curr)._pid, cpu._io[cpu._curr], \
+                            cpu.get_queue() ) )
+
+                else:
+                    # (cpu._curr)._num <= 0 #
+                    print( "time {}ms: Process {} terminated {}".format(cpu._ticker, \
+                            (cpu._curr)._pid, cpu.get_queue()) )
+                    cpu._finished[cpu._curr] = cpu._ticker
+
+                removed = True
+
+            else:
+                # (cpu._curr)._remaining > 0 #
+                (cpu._curr)._remaining -= 1
+
+        io_done = sorted( [ proc for proc, tick in (cpu._io).items() if tick == cpu._ticker ],
+                key = lambda obj : (obj._remaining, obj._pid) )
+        if ( io_done ):
+            if ( cpu._curr ):
+                if ( io_done[0]._remaining < (cpu._curr)._remaining ):
+                    print( "time {}ms: Process {} completed I/O and will preempt {} {}".format(\
+                            cpu._ticker, io_done[0]._pid, (cpu._curr)._pid, \
+                            cpu.get_queue()) )
+                    cpu.preempt( io_done[0] )
+                    print( "time {}ms: Process {} started using the CPU {}".format(\
+                            cpu._ticker, (cpu._curr)._pid, cpu.get_queue()) )
+                    del io_done[0]
+
+            for proc in io_done:
+                proc._readied = cpu._ticker
+                (cpu._ready).append( proc )
+                print( "time {}ms: Process {} completed I/O; added to ready queue {}".format(\
+                        cpu._ticker, proc._pid, cpu.get_queue()) )
+
+        '''for proc in io_done:
+            proc._readied = cpu._ticker
+            (cpu._ready).append( proc )
+            del cpu._io[proc]
+            print( "time {}ms: Process {} completed I/O; added to ready queue {}".format(\
+                    cpu._ticker, proc._pid, cpu.get_queue()) )'''
+
+        '''for proc in cpu._procs:
+            if ( proc._arrival == cpu._ticker ):
+                proc._readied = cpu._ticker
+                tmp.append( proc )
+        tmp = sorted( tmp, key = lambda obj : (obj._remaining, obj._pid) )'''
+
+        arrived = sorted( [ proc for proc in cpu._procs if proc._arrival == cpu._ticker ],
+                key = lambda obj : (obj._remaining, obj._pid) )
+        if ( arrived ):
+            if ( cpu._curr ):
+                if ( arrived[0]._remaining < (cpu._curr)._remaining ):
+                    print( "time {}ms: Process {} arrived and will preempt {} {}".format(\
+                            cpu._ticker, arrived[0]._pid, (cpu._curr)._pid, \
+                            cpu.get_queue()) )
+                    cpu.preempt( arrived[0] )
+                    print( "time {}ms: Process {} started using the CPU {}".format(\
+                            cpu._ticker, (cpu._curr)._pid, cpu.get_queue()) )
+                    del arrived[0]
+
+            for proc in arrived:
+                proc._readied = cpu._ticker
+                (cpu._ready).append( proc )
+                print( "time {}ms: Process {} arrived and added to ready queue {}".format(\
+                        cpu._ticker, proc._pid, cpu.get_queue()) )
+            
+        if ( removed ):
+            cpu.remove()
+
+        if ( cpu._curr == None ):
+            if ( cpu._ready ):
+                cpu.add( (cpu._ready).popleft() )
+                (cpu._curr)._start = cpu._ticker
+                if ( (cpu._curr)._remaining == (cpu._curr)._burst ):
+                    (cpu._curr)._remaining = ( (cpu._curr)._burst - 1 )
+                    print( "time {}ms: Process {} started using the CPU {}".format(\
+                            cpu._ticker, (cpu._curr)._pid, cpu.get_queue()) )
+
+                else:
+                    # (cpu._curr)._remaining != (cpu._curr)._burst #
+                    print( "time {}ms: Process {} started using the CPU with {}ms remaining {}".format( \
+                            cpu._ticker, (cpu._curr)._pid, ((cpu._curr)._remaining + 1),
+                            cpu.get_queue() ) )
+
+        if ( len(cpu._finished) == n ):
+            break
+        
+        cpu._ticker += 1
     
     print( "time {}ms: Simulator ended for SRT\n".format(cpu._ticker) )
     avg_turnaround = cpu._total_turnaround / cpu._total_num
@@ -332,7 +452,7 @@ if ( __name__ == "__main__" ):
                     print( "  " + str(proc) )
 
             fcfs_res = run_fcfs( procs )
-            # srt_res = run_srt( procs )
+            srt_res = run_srt( procs )
             # rr_res = run_rr( procs )
 
             simple_out = []
@@ -342,7 +462,7 @@ if ( __name__ == "__main__" ):
             simple_out = build_simple( simple_out, fcfs_res )
             # Add SRT results. #
             simple_out.append( "Algorithm SRT\n" )
-            # simple_out = build_simple( simple_out, srt_res )
+            simple_out = build_simple( simple_out, srt_res )
             # Add RR results. #
             simple_out.append( "Algorithm RR\n" )
             # simple_out = build_simple( simple_out, rr_res )
