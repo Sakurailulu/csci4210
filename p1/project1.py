@@ -67,10 +67,10 @@ class CPU:
     def __init__( self, procs ):
         # Helper details. #
         self._procs = procs                     # processes found in input file #
-        self._total_turnaround = 0              # total turnaround time #
-        self._total_wait = 0                    # total wait time #
-        self._total_num = sum( [ proc._num for proc in self._procs ] )
-        self._total_burst = sum( [ (proc._burst * proc._num) for proc in self._procs ] )
+        self._total_turnaround = float(0)              # total turnaround time #
+        self._total_wait = float(0)                    # total wait time #
+        self._total_num = float(sum( [ proc._num for proc in self._procs ] ))
+        self._total_burst = float(sum( [ (proc._burst * proc._num) for proc in self._procs ] ))
         self._waits = []                        # wait times for processes #
         self._turnarounds = []                  # turnaround times for processes #
 
