@@ -24,6 +24,8 @@ class Process:
         self._start = arrival                   # most recent start time #
         self._readied = arrival                 # most recent time added to ready #
         self._remaining = burst                 # remaining time for burst #
+        # self._wait = 0                          # time waited in ready queue #
+        # self._turnaround = 0                    # turnaround time #
 
         # Details taken from input file. #
         self._pid = pid
@@ -69,6 +71,8 @@ class CPU:
         self._total_wait = 0                    # total wait time #
         self._total_num = sum( [ proc._num for proc in self._procs ] )
         self._total_burst = sum( [ (proc._burst * proc._num) for proc in self._procs ] )
+        self._waits = []                        # wait times for processes #
+        self._turnarounds = []                  # turnaround times for processes #
 
         # Simple output details. #
         self._avg_burst = ( self._total_burst / self._total_num )
@@ -125,6 +129,7 @@ class CPU:
     """
     def preempt( self, proc ):
         (self._ready).appendleft( self._curr )
+        (self._curr)._readied = self._ticker + t_cs // 2
         self.remove()
         self.add( proc )
         (self._curr)._remaining -= 1
@@ -329,7 +334,7 @@ def run_srt( procs ):
         io_done = sorted( [ proc for proc, tick in (cpu._io).items() if tick == cpu._ticker ],
                 key = lambda obj : (obj._remaining, obj._pid) )
         if ( io_done ):
-            if ( cpu._curr ):
+            if ( (cpu._curr) and (not removed) ):
                 if ( io_done[0]._remaining < (cpu._curr)._remaining ):
                     print( "time {}ms: Process {} completed I/O and will preempt {} {}".format(\
                             cpu._ticker, io_done[0]._pid, (cpu._curr)._pid, \
@@ -342,26 +347,15 @@ def run_srt( procs ):
             for proc in io_done:
                 proc._readied = cpu._ticker
                 (cpu._ready).append( proc )
+                cpu._ready = deque( sorted( cpu._ready, 
+                        key = lambda obj : (obj._remaining, obj._pid) ) )
                 print( "time {}ms: Process {} completed I/O; added to ready queue {}".format(\
                         cpu._ticker, proc._pid, cpu.get_queue()) )
-
-        '''for proc in io_done:
-            proc._readied = cpu._ticker
-            (cpu._ready).append( proc )
-            del cpu._io[proc]
-            print( "time {}ms: Process {} completed I/O; added to ready queue {}".format(\
-                    cpu._ticker, proc._pid, cpu.get_queue()) )'''
-
-        '''for proc in cpu._procs:
-            if ( proc._arrival == cpu._ticker ):
-                proc._readied = cpu._ticker
-                tmp.append( proc )
-        tmp = sorted( tmp, key = lambda obj : (obj._remaining, obj._pid) )'''
 
         arrived = sorted( [ proc for proc in cpu._procs if proc._arrival == cpu._ticker ],
                 key = lambda obj : (obj._remaining, obj._pid) )
         if ( arrived ):
-            if ( cpu._curr ):
+            if ( (cpu._curr) and (not removed) ):
                 if ( arrived[0]._remaining < (cpu._curr)._remaining ):
                     print( "time {}ms: Process {} arrived and will preempt {} {}".format(\
                             cpu._ticker, arrived[0]._pid, (cpu._curr)._pid, \
@@ -374,6 +368,8 @@ def run_srt( procs ):
             for proc in arrived:
                 proc._readied = cpu._ticker
                 (cpu._ready).append( proc )
+                cpu._ready = deque( sorted( cpu._ready, 
+                        key = lambda obj : (obj._remaining, obj._pid) ) )
                 print( "time {}ms: Process {} arrived and added to ready queue {}".format(\
                         cpu._ticker, proc._pid, cpu.get_queue()) )
             
