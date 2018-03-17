@@ -1,3 +1,22 @@
+"""
+project1.py
+Griffin Melnick, melnig@rpi.edu
+Peter Straub, straup@rpi.edu
+
+    CPU scheduling simulation. Performs each of the first-come, first-served 
+    (FCFS), shortest remaining time (SRT), and round robin (RR) algorithms and 
+    prints significant events in processes thorughout duration of simulation. 
+    Writes simulation results summary to an output file. The program is run by 
+    calling
+
+        bash$ python3 project1.py <input-file> <stats-output-file> [<rr-add>]
+
+    where <input-file> is the file with formatted process information, 
+    <stats-output-file> is the file to which to write simulation results summary,
+    and the optional <rr-add> determines whether processes are added to the 
+    beginning or end of the ready queue in the RR algorithm. 
+"""
+
 from __future__ import print_function
 from collections import defaultdict as ddict
 from collections import deque
@@ -25,8 +44,6 @@ class Process:
         self._readied = 0                       # most recent ready time #
         self._last_arrival = arrival            # most recent arrival time #
         self._remaining = burst                 # remaining time for burst #
-        # self._wait = 0                          # time waited in ready queue #
-        # self._turnaround = 0                    # turnaround time #
 
         # Details taken from input file. #
         self._pid = pid
@@ -66,14 +83,12 @@ class CPU:
     Default constructor.
     """
     def __init__( self, procs ):
-        # Helper details. #
         self._procs = procs                     # processes found in input file #
+
+        # Helper details. #
         self._total_turnaround = float( 0 )     # total turnaround time #
         self._total_wait = float( 0 )           # total wait time #
         self._total_num = float( sum( [proc._num for proc in self._procs] ) )
-        # self._total_burst = float( sum( [(proc._burst * proc._num) for proc in self._procs] ) )
-        # self._waits = []                        # wait times for processes #
-        # self._turnarounds = []                  # turnaround times for processes #
 
         # Simple output details. #
         self._avg_burst = ( sum( [(proc._burst * proc._num) for proc in self._procs] )\
@@ -112,7 +127,7 @@ class CPU:
 
     """
     Adds new process.
-    :param:     proc, process to add.
+    :param:     proc, new process.
     """
     def add( self, proc ):
         proc._start = self._ticker
@@ -125,6 +140,8 @@ class CPU:
 
 
     """
+    Adds process to ready queue.
+    :param:     proc, readying process.
     """
     def ready( self, proc ):
         proc._readied = self._ticker
@@ -179,7 +196,7 @@ class CPU:
 
     """
     String representation of CPU.
-    :return: string with time, current process, and string rep of ready queue.
+    :return:    string with time, current process, and string rep of ready queue.
     """
     def __str__( self ):
         return "{}ms: running {}, ready {}".format( self._ticker, self._curr._id, \
@@ -421,7 +438,6 @@ def run_srt( procs ):
     print( "time {}ms: Simulator ended for SRT\n".format(cpu._ticker) )
     cpu._avg_wait = cpu._total_wait / cpu._total_num
     cpu._avg_turnaround = cpu._total_turnaround / cpu._total_num
-    # cpu._avg_turnaround = sum( [proc._turnaround for proc in cpu._procs] ) / cpu._total_num
     return ( cpu._avg_burst, cpu._avg_wait, cpu._avg_turnaround, \
             cpu._context, cpu._preempt )
 
@@ -436,10 +452,8 @@ def run_rr( procs ):
     print( "time {}ms: Simulator started for RR {}".format(cpu._ticker, cpu.get_queue()) )
     
     print( "time {}ms: Simulator ended for RR".format(cpu._ticker) )
-    cpu._avg_turnaround = sum( [proc._turnaround for proc in cpu._procs] ) / cpu._total_num
-    # cpu._avg_turnaround = cpu._total_turnaround / cpu._total
-    cpu._avg_wait = sum( [proc._wait for proc in cpu._procs] ) / cpu._total_num
-    # avg_wait = cpu._total_wait / cpu._total
+    cpu._avg_turnaround = cpu._total_turnaround / cpu._total_num
+    cpu._avg_wait = cpu._total_wait / cpu._total_num
     return ( cpu._avg_burst, cpu._avg_wait, cpu._avg_turnaround, \
             cpu._context, cpu._preempt )
 
