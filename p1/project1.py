@@ -21,8 +21,9 @@ class Process:
     """
     def __init__( self, pid, arrival, burst, num, io ):
         # Helper details. #
-        self._start = arrival                   # most recent start time #
-        self._readied = arrival                 # most recent time added to ready #
+        self._start = 0                         # most recent start time #
+        self._readied = 0                       # most recent ready time #
+        self._last_arrival = arrival            # most recent arrival time #
         self._remaining = burst                 # remaining time for burst #
         # self._wait = 0                          # time waited in ready queue #
         # self._turnaround = 0                    # turnaround time #
@@ -67,15 +68,18 @@ class CPU:
     def __init__( self, procs ):
         # Helper details. #
         self._procs = procs                     # processes found in input file #
-        self._total_turnaround = float(0)              # total turnaround time #
-        self._total_wait = float(0)                    # total wait time #
-        self._total_num = float(sum( [ proc._num for proc in self._procs ] ))
-        self._total_burst = float(sum( [ (proc._burst * proc._num) for proc in self._procs ] ))
-        self._waits = []                        # wait times for processes #
-        self._turnarounds = []                  # turnaround times for processes #
+        self._total_turnaround = float( 0 )     # total turnaround time #
+        self._total_wait = float( 0 )           # total wait time #
+        self._total_num = float( sum( [proc._num for proc in self._procs] ) )
+        # self._total_burst = float( sum( [(proc._burst * proc._num) for proc in self._procs] ) )
+        # self._waits = []                        # wait times for processes #
+        # self._turnarounds = []                  # turnaround times for processes #
 
         # Simple output details. #
-        self._avg_burst = ( self._total_burst / self._total_num )
+        self._avg_burst = ( sum( [(proc._burst * proc._num) for proc in self._procs] )\
+                 / self._total_num )
+        self._avg_wait = 0
+        self._avg_turnaround = 0
         self._context = 0
         self._preempt = 0
 
@@ -107,32 +111,54 @@ class CPU:
     # Modifiers #
 
     """
-    Adds process to _curr.
+    Adds new process.
+    :param:     proc, process to add.
     """
     def add( self, proc ):
-        self._context += 1
+        proc._start = self._ticker
+        self._total_wait += ( self._ticker - proc._readied )
+        
+        # Add new process. #
+        self._ticker += ( t_cs // 2 )
         self._curr = proc
-        self._total_wait += ( self._ticker - (self._curr)._readied )
-        self._ticker += t_cs // 2
+        self._context += 1
 
 
     """
-    Removes running process from _curr.
+    """
+    def ready( self, proc ):
+        proc._readied = self._ticker
+        proc._last_arrival = self._ticker
+        (self._ready).append( proc )
+
+    
+    """
+    Removes running process.
     """
     def remove( self ):
-        self._ticker += t_cs // 2
-        self._total_turnaround += ( self._ticker - (self._curr)._readied )
+        # Remove running process. #
+        self._ticker += ( t_cs // 2 )
+        self._total_turnaround += ( self._ticker - (self._curr)._last_arrival )
         self._curr = None
 
 
     """
+    Preempts running process with new process.
+    :param:     proc, preempting process
     """
     def preempt( self, proc ):
+        # Remove running process and adds to _ready. #
+        self._ticker += ( t_cs // 2 )
+        (self._curr)._readied = self._ticker
         (self._ready).appendleft( self._curr )
-        (self._curr)._readied = self._ticker + t_cs // 2
-        self.remove()
-        self.add( proc )
+        self._curr = None
+
+        # Add new process. #
+        self._ticker += ( t_cs // 2 )
+        self._curr = proc
         (self._curr)._remaining -= 1
+
+        self._context += 1
         self._preempt += 1
 
     # ------------------------------------------------------------------------ #
@@ -257,16 +283,15 @@ def run_fcfs( procs ):
         io_done = sorted( [ proc for proc, tick in (cpu._io).items() if tick == cpu._ticker ],
                 key = lambda obj : obj._pid )
         for proc in io_done:
-            proc._readied = cpu._ticker
-            (cpu._ready).append( proc )
+            cpu.ready( proc )
             del cpu._io[proc]
             print( "time {}ms: Process {} completed I/O; added to ready queue {}".format(\
                     cpu._ticker, proc._pid, cpu.get_queue()) )
 
         for proc in cpu._procs:
             if ( proc._arrival == cpu._ticker ):
-                proc._readied = cpu._ticker
-                (cpu._ready).append( proc )
+                proc._last_arrival = cpu._ticker
+                cpu.ready( proc )
                 print( "time {}ms: Process {} arrived and added to ready queue {}".format(\
                         cpu._ticker, proc._pid, cpu.get_queue()) )
 
@@ -276,7 +301,6 @@ def run_fcfs( procs ):
         if ( cpu._curr == None ):
             if ( cpu._ready ):
                 cpu.add( (cpu._ready).popleft() )
-                (cpu._curr)._start = cpu._ticker
                 (cpu._curr)._remaining = ( (cpu._curr)._burst - 1 )
                 print( "time {}ms: Process {} started using the CPU {}".format(\
                         cpu._ticker, (cpu._curr)._pid, cpu.get_queue()) )
@@ -287,9 +311,9 @@ def run_fcfs( procs ):
         cpu._ticker += 1
 
     print( "time {}ms: Simulator ended for FCFS\n".format(cpu._ticker) )
-    avg_turnaround = cpu._total_turnaround / cpu._total_num
-    avg_wait = cpu._total_wait / cpu._total_num
-    return ( cpu._avg_burst, avg_wait, avg_turnaround, \
+    cpu._avg_wait = cpu._total_wait / cpu._total_num
+    cpu._avg_turnaround = cpu._total_turnaround / cpu._total_num
+    return ( cpu._avg_burst, cpu._avg_wait, cpu._avg_turnaround, \
             cpu._context, cpu._preempt )
 
 
@@ -345,8 +369,7 @@ def run_srt( procs ):
                     del io_done[0]
 
             for proc in io_done:
-                proc._readied = cpu._ticker
-                (cpu._ready).append( proc )
+                cpu.ready( proc )
                 cpu._ready = deque( sorted( cpu._ready, 
                         key = lambda obj : (obj._remaining, obj._pid) ) )
                 print( "time {}ms: Process {} completed I/O; added to ready queue {}".format(\
@@ -366,8 +389,7 @@ def run_srt( procs ):
                     del arrived[0]
 
             for proc in arrived:
-                proc._readied = cpu._ticker
-                (cpu._ready).append( proc )
+                cpu.ready( proc )
                 cpu._ready = deque( sorted( cpu._ready, 
                         key = lambda obj : (obj._remaining, obj._pid) ) )
                 print( "time {}ms: Process {} arrived and added to ready queue {}".format(\
@@ -379,7 +401,7 @@ def run_srt( procs ):
         if ( cpu._curr == None ):
             if ( cpu._ready ):
                 cpu.add( (cpu._ready).popleft() )
-                (cpu._curr)._start = cpu._ticker
+                (cpu._curr)._start = ( cpu._ticker - (t_cs // 2) )
                 if ( (cpu._curr)._remaining == (cpu._curr)._burst ):
                     (cpu._curr)._remaining = ( (cpu._curr)._burst - 1 )
                     print( "time {}ms: Process {} started using the CPU {}".format(\
@@ -397,9 +419,10 @@ def run_srt( procs ):
         cpu._ticker += 1
     
     print( "time {}ms: Simulator ended for SRT\n".format(cpu._ticker) )
-    avg_turnaround = cpu._total_turnaround / cpu._total_num
-    avg_wait = cpu._total_wait / cpu._total_num
-    return ( cpu._avg_burst, avg_wait, avg_turnaround, \
+    cpu._avg_wait = cpu._total_wait / cpu._total_num
+    cpu._avg_turnaround = cpu._total_turnaround / cpu._total_num
+    # cpu._avg_turnaround = sum( [proc._turnaround for proc in cpu._procs] ) / cpu._total_num
+    return ( cpu._avg_burst, cpu._avg_wait, cpu._avg_turnaround, \
             cpu._context, cpu._preempt )
 
 
@@ -413,9 +436,11 @@ def run_rr( procs ):
     print( "time {}ms: Simulator started for RR {}".format(cpu._ticker, cpu.get_queue()) )
     
     print( "time {}ms: Simulator ended for RR".format(cpu._ticker) )
-    avg_turnaround = cpu._total_turnaround / cpu._total_num
-    avg_wait = cpu._total_wait / cpu._total_num
-    return ( cpu._avg_burst, avg_wait, avg_turnaround, \
+    cpu._avg_turnaround = sum( [proc._turnaround for proc in cpu._procs] ) / cpu._total_num
+    # cpu._avg_turnaround = cpu._total_turnaround / cpu._total
+    cpu._avg_wait = sum( [proc._wait for proc in cpu._procs] ) / cpu._total_num
+    # avg_wait = cpu._total_wait / cpu._total
+    return ( cpu._avg_burst, cpu._avg_wait, cpu._avg_turnaround, \
             cpu._context, cpu._preempt )
 
 # ---------------------------------------------------------------------------- #
@@ -460,7 +485,7 @@ if ( __name__ == "__main__" ):
             simple_out.append( "Algorithm SRT\n" )
             simple_out = build_simple( simple_out, srt_res )
             # Add RR results. #
-            simple_out.append( "Algorithm RR\n" )
+            # simple_out.append( "Algorithm RR\n" )
             # simple_out = build_simple( simple_out, rr_res )
 
             f.writelines( simple_out )
