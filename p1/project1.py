@@ -104,6 +104,7 @@ class CPU:
         self._ready = deque()                   # ready queue for processes #
         self._finished = ddict( int )           # maps PID to final burst finish #
         self._io = ddict( int )                 # maps PID to I/O finish #
+        self._tslice = t_slice
 
     # ------------------------------------------------------------------------ #
     # Accessors #
@@ -451,7 +452,89 @@ Round robin simulation.
 def run_rr( procs ):
     cpu = CPU( copy.deepcopy(procs) )
     print( "time {}ms: Simulator started for RR {}".format(cpu._ticker, cpu.get_queue()) )
-    
+    while 1:
+        removed = False
+        if ( cpu._curr != None ):
+            # Check for finished process. #
+            if ( (cpu._curr)._remaining <= 0 ):
+                (cpu._curr)._num -= 1
+                if ( (cpu._curr)._num > 0 ):
+                    print( "time {}ms: Process {} completed a CPU burst; {} burst{} to go {}".format( \
+                            cpu._ticker, (cpu._curr)._pid, (cpu._curr)._num, \
+                            ('s' if (cpu._curr)._num != 1 else ''), cpu.get_queue() ) )
+
+                    cpu._io[cpu._curr] = ( cpu._ticker + (cpu._curr)._io + (t_cs // 2) )
+                    print( "time {}ms: Process {} switching out of CPU; will block on I/O until time {}ms {}".format( \
+                            cpu._ticker, (cpu._curr)._pid, cpu._io[cpu._curr], \
+                            cpu.get_queue() ) )
+
+                else:
+                    # (cpu._curr)._num <= 0 #
+                    print( "time {}ms: Process {} terminated {}".format(cpu._ticker, \
+                            (cpu._curr)._pid, cpu.get_queue()) )
+                    cpu._finished[cpu._curr] = cpu._ticker
+
+                removed = True
+            
+            elif(cpu._tslice == 1):
+                cpu._tslice = t_slice
+                if(cpu.get_queue() == "[Q <empty>]"):
+				    print( "time {}ms: Time slice expired; no preemption because ready queue is empty to go {}".format(cpu._ticker, \
+                            cpu.get_queue()) )
+                else:
+                    print( "time {}ms: Time slice expired; process {} preempted with {}ms to go {}".format(cpu._ticker, \
+                             (cpu._curr)._pid, cpu._curr._remaining , cpu.get_queue()) )
+                    if ( cpu._ready ):
+                        cpu.preempt( (cpu._ready).popleft() )
+                #(cpu._curr)._start = ( cpu._ticker - (t_cs // 2) )
+                        if ( (cpu._curr)._remaining == (cpu._curr)._burst ):
+                            (cpu._curr)._remaining = ( (cpu._curr)._burst - 1 )
+                            print( "time {}ms: Process {} started using the CPU {}".format(\
+                                cpu._ticker, (cpu._curr)._pid, cpu.get_queue()) )
+
+                        else:
+                    # (cpu._curr)._remaining != (cpu._curr)._burst #
+                            print( "time {}ms: Process {} started using the CPU with {}ms remaining {}".format( \
+                                cpu._ticker, (cpu._curr)._pid, ((cpu._curr)._remaining + 1),
+                                cpu.get_queue() ) )
+
+				
+			
+            else:
+                # (cpu._curr)._remaining > 0 #
+                (cpu._curr)._remaining -= 1
+                cpu._tslice -= 1
+
+        io_done = sorted( [ proc for proc, tick in (cpu._io).items() if tick == cpu._ticker ],
+                key = lambda obj : obj._pid )
+        for proc in io_done:
+            cpu.ready( proc )
+            del cpu._io[proc]
+            print( "time {}ms: Process {} completed I/O; added to ready queue {}".format(\
+                    cpu._ticker, proc._pid, cpu.get_queue()) )
+
+        for proc in cpu._procs:
+            if ( proc._arrival == cpu._ticker ):
+                proc._last_arrival = cpu._ticker
+                cpu.ready( proc )
+                print( "time {}ms: Process {} arrived and added to ready queue {}".format(\
+                        cpu._ticker, proc._pid, cpu.get_queue()) )
+
+        if ( removed ):
+            cpu.remove()
+
+        if ( cpu._curr == None ):
+            if ( cpu._ready ):
+                cpu.add( (cpu._ready).popleft() )
+                (cpu._curr)._remaining = ( (cpu._curr)._burst - 1 )
+                print( "time {}ms: Process {} started using the CPU {}".format(\
+                        cpu._ticker, (cpu._curr)._pid, cpu.get_queue()) )
+
+        if ( len(cpu._finished) == n ):
+            break
+        
+        cpu._ticker += 1
+	
     print( "time {}ms: Simulator ended for RR".format(cpu._ticker) )
     cpu._avg_turnaround = cpu._total_turnaround / cpu._total_num
     cpu._avg_wait = cpu._total_wait / cpu._total_num
@@ -489,7 +572,7 @@ if ( __name__ == "__main__" ):
 
             fcfs_res = run_fcfs( procs )
             srt_res = run_srt( procs )
-            # rr_res = run_rr( procs )
+            rr_res = run_rr( procs )
 
             simple_out = []
 
@@ -500,8 +583,8 @@ if ( __name__ == "__main__" ):
             simple_out.append( "Algorithm SRT\n" )
             simple_out = build_simple( simple_out, srt_res )
             # Add RR results. #
-            # simple_out.append( "Algorithm RR\n" )
-            # simple_out = build_simple( simple_out, rr_res )
+            simple_out.append( "Algorithm RR\n" )
+            simple_out = build_simple( simple_out, rr_res )
 
             f.writelines( simple_out )
             f.close()
