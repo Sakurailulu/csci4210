@@ -437,7 +437,8 @@ def run_srt( procs ):
     
     print( "time {}ms: Simulator ended for SRT\n".format(cpu._ticker) )
     cpu._avg_wait = cpu._total_wait / cpu._total_num
-    cpu._avg_turnaround = cpu._total_turnaround / cpu._total_num
+    cpu._avg_turnaround = cpu._avg_burst + cpu._avg_wait + t_cs + (t_cs*cpu._preempt)/cpu._total_num
+    #cpu._avg_turnaround = cpu._total_turnaround / cpu._total_num
     return ( cpu._avg_burst, cpu._avg_wait, cpu._avg_turnaround, \
             cpu._context, cpu._preempt )
 
