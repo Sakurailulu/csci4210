@@ -104,7 +104,7 @@ class CPU:
         self._ready = deque()                   # ready queue for processes #
         self._finished = ddict( int )           # maps PID to final burst finish #
         self._io = ddict( int )                 # maps PID to I/O finish #
-        self._tslice = t_slice
+        self._tslice = t_slice					# time remaining in the slice #
 
     # ------------------------------------------------------------------------ #
     # Accessors #
@@ -179,6 +179,23 @@ class CPU:
         self._context += 1
         self._preempt += 1
 
+    def preempt_rr( self, proc ):
+        # Remove running process and adds to _ready. #
+        self._ticker += ( t_cs // 2 )
+        (self._curr)._readied = self._ticker
+        if(rr_add == 1):
+            (self._ready).appendleft( self._curr )
+        else:
+		    (self._ready).append( self._curr )
+        self._curr = None
+
+        # Add new process. #
+        self._ticker += ( t_cs // 2 )
+        self._curr = proc
+        (self._curr)._remaining -= 1
+
+        self._context += 1
+        self._preempt += 1
     # ------------------------------------------------------------------------ #
     # Overridden methods #
     
@@ -459,11 +476,13 @@ def run_rr( procs ):
             if ( (cpu._curr)._remaining <= 0 ):
                 (cpu._curr)._num -= 1
                 if ( (cpu._curr)._num > 0 ):
+                    cpu._tslice = t_slice 
                     print( "time {}ms: Process {} completed a CPU burst; {} burst{} to go {}".format( \
                             cpu._ticker, (cpu._curr)._pid, (cpu._curr)._num, \
                             ('s' if (cpu._curr)._num != 1 else ''), cpu.get_queue() ) )
 
                     cpu._io[cpu._curr] = ( cpu._ticker + (cpu._curr)._io + (t_cs // 2) )
+                    (cpu._curr)._remaining = (cpu._curr)._burst
                     print( "time {}ms: Process {} switching out of CPU; will block on I/O until time {}ms {}".format( \
                             cpu._ticker, (cpu._curr)._pid, cpu._io[cpu._curr], \
                             cpu.get_queue() ) )
@@ -477,7 +496,7 @@ def run_rr( procs ):
                 removed = True
             
             elif(cpu._tslice == 1):
-                cpu._tslice = t_slice
+                cpu._tslice = t_slice-1
                 if(cpu.get_queue() == "[Q <empty>]"):
 				    print( "time {}ms: Time slice expired; no preemption because ready queue is empty to go {}".format(cpu._ticker, \
                             cpu.get_queue()) )
@@ -485,7 +504,7 @@ def run_rr( procs ):
                     print( "time {}ms: Time slice expired; process {} preempted with {}ms to go {}".format(cpu._ticker, \
                              (cpu._curr)._pid, cpu._curr._remaining , cpu.get_queue()) )
                     if ( cpu._ready ):
-                        cpu.preempt( (cpu._ready).popleft() )
+                        cpu.preempt_rr( (cpu._ready).popleft() )
                 #(cpu._curr)._start = ( cpu._ticker - (t_cs // 2) )
                         if ( (cpu._curr)._remaining == (cpu._curr)._burst ):
                             (cpu._curr)._remaining = ( (cpu._curr)._burst - 1 )
@@ -524,11 +543,22 @@ def run_rr( procs ):
             cpu.remove()
 
         if ( cpu._curr == None ):
+            cpu._tslice = t_slice-1
             if ( cpu._ready ):
                 cpu.add( (cpu._ready).popleft() )
-                (cpu._curr)._remaining = ( (cpu._curr)._burst - 1 )
-                print( "time {}ms: Process {} started using the CPU {}".format(\
+                if ( (cpu._curr)._remaining == (cpu._curr)._burst ):
+                    (cpu._curr)._remaining = ( (cpu._curr)._burst - 1 )
+                    print( "time {}ms: Process {} started using the CPU {}".format(\
                         cpu._ticker, (cpu._curr)._pid, cpu.get_queue()) )
+
+                else:
+                    (cpu._curr)._remaining = ( (cpu._curr)._remaining - 1 )
+                    print( "time {}ms: Process {} started using the CPU with {}ms remaining {}".format( \
+                        cpu._ticker, (cpu._curr)._pid, ((cpu._curr)._remaining + 1),
+                        cpu.get_queue() ) )
+
+                #print( "time {}ms: Process {} started using the CPU {}".format(\
+                #        cpu._ticker, (cpu._curr)._pid, cpu.get_queue()) )
 
         if ( len(cpu._finished) == n ):
             break
@@ -570,18 +600,18 @@ if ( __name__ == "__main__" ):
                 for proc in procs:
                     print( "  " + str(proc) )
 
-            fcfs_res = run_fcfs( procs )
-            srt_res = run_srt( procs )
+            #fcfs_res = run_fcfs( procs )
+            #srt_res = run_srt( procs )
             rr_res = run_rr( procs )
 
             simple_out = []
 
             # Add FCFS results. #
-            simple_out.append( "Algorithm FCFS\n" )
-            simple_out = build_simple( simple_out, fcfs_res )
+            #simple_out.append( "Algorithm FCFS\n" )
+            #simple_out = build_simple( simple_out, fcfs_res )
             # Add SRT results. #
-            simple_out.append( "Algorithm SRT\n" )
-            simple_out = build_simple( simple_out, srt_res )
+            #simple_out.append( "Algorithm SRT\n" )
+            #simple_out = build_simple( simple_out, srt_res )
             # Add RR results. #
             simple_out.append( "Algorithm RR\n" )
             simple_out = build_simple( simple_out, rr_res )
