@@ -130,13 +130,29 @@ class CPU:
     Adds new process.
     :param:     proc, new process.
     """
-    def add( self, proc ):
-        proc._start = self._ticker
-        self._total_wait += ( self._ticker - proc._readied )
+    def add( self, proc1 ):
+        proc1._start = self._ticker
+        self._total_wait += ( self._ticker - proc1._readied )
         
         # Add new process. #
-        self._ticker += ( t_cs // 2 )
-        self._curr = proc
+        #self._ticker += ( t_cs // 2 )
+        for x in range(0,t_cs//2):
+            self._ticker += 1
+            io_done = sorted( [ proc for proc, tick in (self._io).items() if tick == self._ticker ],
+                key = lambda obj : obj._pid )
+            for proc in io_done:
+                self.ready( proc )
+                del self._io[proc]
+                print( "time {}ms: Process {} completed I/O; added to ready queue {}".format(\
+                    self._ticker, proc._pid, self.get_queue()) )
+
+            for proc in self._procs:
+                if ( proc._arrival == self._ticker ):
+                    proc._last_arrival = self._ticker
+                    self.ready( proc )
+                    print( "time {}ms: Process {} arrived and added to ready queue {}".format(\
+                        self._ticker, proc._pid, self.get_queue()) )
+        self._curr = proc1
         self._context += 1
 
 
@@ -155,7 +171,25 @@ class CPU:
     """
     def remove( self ):
         # Remove running process. #
-        self._ticker += ( t_cs // 2 )
+        for x in range(0,t_cs//2):
+            self._ticker += 1
+            io_done = sorted( [ proc for proc, tick in (self._io).items() if tick == self._ticker ],
+                key = lambda obj : obj._pid )
+            for proc in io_done:
+                self.ready( proc )
+                del self._io[proc]
+                print( "time {}ms: Process {} completed I/O; added to ready queue {}".format(\
+                    self._ticker, proc._pid, self.get_queue()) )
+
+            for proc in self._procs:
+                if ( proc._arrival == self._ticker ):
+                    proc._last_arrival = self._ticker
+                    self.ready( proc )
+                    print( "time {}ms: Process {} arrived and added to ready queue {}".format(\
+                        self._ticker, proc._pid, self.get_queue()) )
+            #print("test")
+        #self._ticker += ( t_cs // 2 )
+
         self._total_turnaround += ( self._ticker - (self._curr)._last_arrival )
         self._curr = None
 
@@ -495,10 +529,10 @@ def run_rr( procs ):
 
                 removed = True
             
-            elif(cpu._tslice == 1):
+            elif(cpu._tslice == 0):
                 cpu._tslice = t_slice-1
                 if(cpu.get_queue() == "[Q <empty>]"):
-				    print( "time {}ms: Time slice expired; no preemption because ready queue is empty to go {}".format(cpu._ticker, \
+				    print( "time {}ms: Time slice expired; no preemption because ready queue is empty {}".format(cpu._ticker, \
                             cpu.get_queue()) )
                 else:
                     print( "time {}ms: Time slice expired; process {} preempted with {}ms to go {}".format(cpu._ticker, \
@@ -524,7 +558,7 @@ def run_rr( procs ):
                 (cpu._curr)._remaining -= 1
                 cpu._tslice -= 1
 
-        io_done = sorted( [ proc for proc, tick in (cpu._io).items() if tick == cpu._ticker ],
+        io_done = sorted( [ proc for proc, tick in (cpu._io).items() if tick <= cpu._ticker ],
                 key = lambda obj : obj._pid )
         for proc in io_done:
             cpu.ready( proc )
@@ -600,15 +634,15 @@ if ( __name__ == "__main__" ):
                 for proc in procs:
                     print( "  " + str(proc) )
 
-            #fcfs_res = run_fcfs( procs )
+            fcfs_res = run_fcfs( procs )
             #srt_res = run_srt( procs )
             rr_res = run_rr( procs )
 
             simple_out = []
 
             # Add FCFS results. #
-            #simple_out.append( "Algorithm FCFS\n" )
-            #simple_out = build_simple( simple_out, fcfs_res )
+            simple_out.append( "Algorithm FCFS\n" )
+            simple_out = build_simple( simple_out, fcfs_res )
             # Add SRT results. #
             #simple_out.append( "Algorithm SRT\n" )
             #simple_out = build_simple( simple_out, srt_res )
