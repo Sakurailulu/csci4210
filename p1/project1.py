@@ -3,18 +3,18 @@ project1.py
 Griffin Melnick, melnig@rpi.edu
 Peter Straub, straup@rpi.edu
 
-    CPU scheduling simulation. Performs each of the first-come, first-served 
-    (FCFS), shortest remaining time (SRT), and round robin (RR) algorithms and 
-    prints significant events in processes thorughout duration of simulation. 
-    Writes simulation results summary to an output file. The program is run by 
+    CPU scheduling simulation. Performs each of the first-come, first-served
+    (FCFS), shortest remaining time (SRT), and round robin (RR) algorithms and
+    prints significant events in processes thorughout duration of simulation.
+    Writes simulation results summary to an output file. The program is run by
     calling
 
         bash$ python3 project1.py <input-file> <stats-output-file> [<rr-add>]
 
-    where <input-file> is the file with formatted process information, 
+    where <input-file> is the file with formatted process information,
     <stats-output-file> is the file to which to write simulation results summary,
-    and the optional <rr-add> determines whether processes are added to the 
-    beginning or end of the ready queue in the RR algorithm. 
+    and the optional <rr-add> determines whether processes are added to the
+    beginning or end of the ready queue in the RR algorithm.
 """
 
 from __future__ import print_function
@@ -35,6 +35,7 @@ rr_add = 0
 Process helper class to store process details from input file.
 """
 class Process:
+
     """
     Default constructor.
     """
@@ -42,7 +43,7 @@ class Process:
         # Helper details. #
         self._start = 0                         # most recent start time #
         self._readied = 0                       # most recent ready time #
-        self._last_arrival = arrival            # most recent arrival time #
+        # self._last_arrival = arrival            # most recent arrival time #
         self._remaining = burst                 # remaining time for burst #
 
         # Details taken from input file. #
@@ -60,11 +61,8 @@ class Process:
     :return:    raw representation of all data in Process object.
     """
     def __repr__( self ):
-        repr_rep = "Process(_pid = {}, _arrival = {}, ".format( \
-                self._pid, self._arrival )
-        repr_rep += "_burst = {}, _num = {}, _io = {})".format( \
-                self._burst, self._num, self._io )
-        return repr_rep
+        return "Process(_pid = {}, _arrival = {}, _burst = {}, _num = {}, _io = {})".format( \
+                self._pid, self._arrival, self._burst, self._num, self._io )
 
 
     """
@@ -79,6 +77,7 @@ class Process:
 CPU helper class to better keep track of processes throughout scheduling.
 """
 class CPU:
+
     """
     Default constructor.
     """
@@ -104,11 +103,11 @@ class CPU:
         self._ready = deque()                   # ready queue for processes #
         self._finished = ddict( int )           # maps PID to final burst finish #
         self._io = ddict( int )                 # maps PID to I/O finish #
-        self._tslice = t_slice					# time remaining in the slice #
+        self._t_slice = t_slice                 # time remaining in the slice #
 
     # ------------------------------------------------------------------------ #
     # Accessors #
-    
+
     """
     String representation of CPU ready queue.
     :return:    string in the format of '[Q *contents of _ready*]
@@ -127,70 +126,140 @@ class CPU:
     # Modifiers #
 
     """
-    Adds new process.
-    :param:     proc, new process.
+    Adds process to ready queue.
+    :param:     proc, readying process.
+                srt, boolean to work in SRT mode (preemptions).
+                    [defaults to false]
+                side, boolean to determine readying to start or end of queue.
+                    [defaults to false]
     """
-    def add( self, proc1 ):
-        proc1._start = self._ticker
-        self._total_wait += ( self._ticker - proc1._readied )
-        
-        # Add new process. #
-        #self._ticker += ( t_cs // 2 )
-        for x in range(0,t_cs//2):
+    def ready( self, proc, srt = 0, side = 0 ):
+        proc._readied = self._ticker
+        # proc._last_arrival = self._ticker
+
+        # Add to start of ready queue if rr_add is true (add to BEGINNING). #
+        if ( not side ):
+            (self._ready).append( proc )
+
+        else:
+            (self._ready).appendleft( proc )
+
+        # Sort by remaining time in SRT is simulating. #
+        if ( srt ):
+            self._ready = deque( sorted( self._ready, key = lambda obj : \
+                    (obj._remaining, obj._pid) ) )
+
+
+    """
+    Adds new process.
+    :param:     srt, boolean to work in SRT mode (preemptions).
+                    [defaults to false]
+                side, boolean to determine readying to start or end of queue.
+                    [defaults to false]
+    :modifies:  (1) self._curr, (2) self._io, (3) self._ready
+    :effects:   (1) first process in self._ready is assigned to self._curr.
+                (2) self._io is checked for processes finished on I/O.
+                (3) new process arrival is checked and added to self._ready.
+    """
+    def add( self, srt = 0, side = 0 ):
+        # Add next process in ready queue. #
+        self._curr = (self._ready).popleft()
+        self._total_wait += ( self._ticker - (self._curr)._readied )
+        (self._curr)._start = self._ticker
+
+        # Check for I/O completion and new arrivals during context switch. #
+        for _ in range( t_cs // 2 ):
             self._ticker += 1
-            io_done = sorted( [ proc for proc, tick in (self._io).items() if tick == self._ticker ],
-                key = lambda obj : obj._pid )
+
+            # Find processes completed with I/O. #
+            if ( srt ):
+                # Sort by remaining time then PID. #
+                io_done = sorted( [ proc for proc, tick in (self._io).items() \
+                        if tick == self._ticker ], key = lambda obj : (obj._remaining, \
+                        obj._pid) )
+
+            else:
+                # Sort by PID. #
+                io_done = sorted( [ proc for proc, tick in (self._io).items() \
+                        if tick == self._ticker ], key = lambda obj : obj._pid )
+
             for proc in io_done:
-                self.ready( proc )
+                self.ready( proc, srt )
                 del self._io[proc]
                 print( "time {}ms: Process {} completed I/O; added to ready queue {}".format(\
-                    self._ticker, proc._pid, self.get_queue()) )
-
-            for proc in self._procs:
-                if ( proc._arrival == self._ticker ):
-                    proc._last_arrival = self._ticker
-                    self.ready( proc )
-                    print( "time {}ms: Process {} arrived and added to ready queue {}".format(\
                         self._ticker, proc._pid, self.get_queue()) )
-        self._curr = proc1
+
+            # Find process that have arrived to the CPU. #
+            if ( srt ):
+                # Sort by remaining time then PID. #
+                arrived = sorted( [ proc for proc in self._procs if proc._arrival == \
+                        self._ticker ], key = lambda obj : (obj._remaining, obj._pid) )
+
+            else:
+                # Sort by PID. #
+                arrived = sorted( [ proc for proc in self._procs if proc._arrival == \
+                        self._ticker ], key = lambda obj : obj._pid )
+
+            for proc in arrived:
+                self.ready( proc, srt )
+                print( "time {}ms: Process {} arrived and added to ready queue {}".format(\
+                        self._ticker, proc._pid, self.get_queue()) )
+
         self._context += 1
 
 
     """
-    Adds process to ready queue.
-    :param:     proc, readying process.
-    """
-    def ready( self, proc ):
-        proc._readied = self._ticker
-        proc._last_arrival = self._ticker
-        (self._ready).append( proc )
-
-    
-    """
     Removes running process.
+    :param:     srt, boolean to work in SRT mode (preemptions).
+                    [defaults to false]
+                side, boolean to determine readying to start or end of queue.
+                    [defaults to false]
+    :modifies:  (1) self._curr, (2) self._io, (3) self._ready
+    :effects:   (1) process in self._curr is removed.
+                (2) self._io is checked for processes finished on I/O.
+                (3) new process arrival is checked and added to self._ready.
     """
-    def remove( self ):
-        # Remove running process. #
-        for x in range(0,t_cs//2):
+    def remove( self, srt = 0, side = 0 ):
+        # Check for I/O completion and new arrivals during context switch. #
+        for _ in range( t_cs // 2 ):
             self._ticker += 1
-            io_done = sorted( [ proc for proc, tick in (self._io).items() if tick == self._ticker ],
-                key = lambda obj : obj._pid )
+
+            # Find processes completed with I/O. #
+            if ( srt ):
+                # Sort by remaining time then PID. #
+                io_done = sorted( [ proc for proc, tick in (self._io).items() \
+                        if tick == self._ticker ], key = lambda obj : (obj._remaining, \
+                        obj._pid) )
+
+            else:
+                # Sort by PID. #
+                io_done = sorted( [ proc for proc, tick in (self._io).items() \
+                        if tick == self._ticker ], key = lambda obj : obj._pid )
+
             for proc in io_done:
-                self.ready( proc )
+                self.ready( proc, srt )
                 del self._io[proc]
                 print( "time {}ms: Process {} completed I/O; added to ready queue {}".format(\
-                    self._ticker, proc._pid, self.get_queue()) )
-
-            for proc in self._procs:
-                if ( proc._arrival == self._ticker ):
-                    proc._last_arrival = self._ticker
-                    self.ready( proc )
-                    print( "time {}ms: Process {} arrived and added to ready queue {}".format(\
                         self._ticker, proc._pid, self.get_queue()) )
-            #print("test")
-        #self._ticker += ( t_cs // 2 )
 
-        self._total_turnaround += ( self._ticker - (self._curr)._last_arrival )
+            # Find process that have arrived to the CPU. #
+            if ( srt ):
+                # Sort by remaining time then PID. #
+                arrived = sorted( [ proc for proc in self._procs if proc._arrival == \
+                        self._ticker ], key = lambda obj : (obj._remaining, obj._pid) )
+
+            else:
+                # Sort by PID. #
+                arrived = sorted( [ proc for proc in self._procs if proc._arrival == \
+                        self._ticker ], key = lambda obj : obj._pid )
+
+            for proc in arrived:
+                self.ready( proc, srt )
+                print( "time {}ms: Process {} arrived and added to ready queue {}".format(\
+                        self._ticker, proc._pid, self.get_queue()) )
+
+        # Remove running process. #
+        self._total_turnaround += ( self._ticker - (self._curr)._readied )
         self._curr = None
 
 
@@ -198,41 +267,131 @@ class CPU:
     Preempts running process with new process.
     :param:     proc, preempting process
     """
-    def preempt( self, proc ):
-        # Remove running process and adds to _ready. #
-        self._ticker += ( t_cs // 2 )
-        (self._curr)._readied = self._ticker
+    def preempt_srt( self, proc ):
+        # Check for I/O completion and new arrivals during context switch. #
+        ## First half of switch. ##
+        for _ in range( t_cs // 2 ):
+            self._ticker += 1
+
+            # Find processes completed with I/O. #
+            io_done = sorted( [ proc for proc, tick in (self._io).items() \
+                    if tick == self._ticker ], key = lambda obj : (obj._remaining, \
+                    obj._pid) )
+            for proc in io_done:
+                self.ready( proc, 1, 1 )
+                del self._io[proc]
+                print( "time {}ms: Process {} completed I/O; added to ready queue {}".format(\
+                        self._ticker, proc._pid, self.get_queue()) )
+
+            # Find process that have arrived to the CPU. #
+            arrived = sorted( [ proc for proc in self._procs if proc._arrival == \
+                    self._ticker ], key = lambda obj : (obj._remaining, obj._pid) )
+            for proc in arrived:
+                self.ready( proc, 1, 1 )
+                print( "time {}ms: Process {} arrived and added to ready queue {}".format(\
+                        self._ticker, proc._pid, self.get_queue()) )
+
+        # (self._curr)._readied = self._ticker
         (self._ready).appendleft( self._curr )
-        self._curr = None
+        # self._curr = None
+
+        # Check for I/O completion and new arrivals during context switch. #
+        ## Second half of switch. ##
+        for _ in range( t_cs // 2 ):
+            self._ticker += 1
+
+            # Find processes completed with I/O. #
+            io_done = sorted( [ proc for proc, tick in (self._io).items() \
+                    if tick == self._ticker ], key = lambda obj : (obj._remaining, \
+                    obj._pid) )
+            for proc in io_done:
+                self.ready( proc, 1, 1 )
+                del self._io[proc]
+                print( "time {}ms: Process {} completed I/O; added to ready queue {}".format(\
+                        self._ticker, proc._pid, self.get_queue()) )
+
+            # Find process that have arrived to the CPU. #
+            arrived = sorted( [ proc for proc in self._procs if proc._arrival == \
+                    self._ticker ], key = lambda obj : (obj._remaining, obj._pid) )
+            for proc in arrived:
+                self.ready( proc, 1, 1 )
+                print( "time {}ms: Process {} arrived and added to ready queue {}".format(\
+                        self._ticker, proc._pid, self.get_queue()) )
 
         # Add new process. #
-        self._ticker += ( t_cs // 2 )
         self._curr = proc
         (self._curr)._remaining -= 1
 
         self._context += 1
         self._preempt += 1
 
-    def preempt_rr( self, proc ):
-        # Remove running process and adds to _ready. #
-        self._ticker += ( t_cs // 2 )
-        (self._curr)._readied = self._ticker
-        if(rr_add == 1):
+
+    """
+    """
+    def preempt_rr( self ):
+        # Check for I/O completion and new arrivals during context switch. #
+        ## First half of switch. ##
+        for _ in range( t_cs // 2 ):
+            self._ticker += 1
+
+            # Find processes completed with I/O. #
+            io_done = sorted( [ proc for proc, tick in (self._io).items() \
+                    if tick == self._ticker ], key = lambda obj : obj._pid )
+            for proc in io_done:
+                self.ready( proc, 0, rr_add )
+                del self._io[proc]
+                print( "time {}ms: Process {} completed I/O; added to ready queue {}".format(\
+                        self._ticker, proc._pid, self.get_queue()) )
+
+            # Find process that have arrived to the CPU. #
+            arrived = sorted( [ proc for proc in self._procs if proc._arrival == \
+                    self._ticker ], key = lambda obj : obj._pid )
+            for proc in arrived:
+                self.ready( proc, 0, rr_add )
+                print( "time {}ms: Process {} arrived and added to ready queue {}".format(\
+                        self._ticker, proc._pid, self.get_queue()) )
+
+        # (self._curr)._readied = self._ticker
+        # self._curr = None
+
+        # Add to start of ready queue if rr_add is true (add to BEGINNING). #
+        if ( rr_add ):
             (self._ready).appendleft( self._curr )
-        else:
-		    (self._ready).append( self._curr )
-        self._curr = None
 
-        # Add new process. #
-        self._ticker += ( t_cs // 2 )
-        self._curr = proc
+        else:
+            (self._ready).append( self._curr )
+
+        # Check for I/O completion and new arrivals during context switch. #
+        ## Second half of switch. ##
+        for _ in range( t_cs // 2 ):
+            self._ticker += 1
+
+            # Find processes completed with I/O. #
+            io_done = sorted( [ proc for proc, tick in (self._io).items() \
+                    if tick == self._ticker ], key = lambda obj : obj._pid )
+            for proc in io_done:
+                self.ready( proc, 0, rr_add )
+                del self._io[proc]
+                print( "time {}ms: Process {} completed I/O; added to ready queue {}".format(\
+                        self._ticker, proc._pid, self.get_queue()) )
+
+            # Find process that have arrived to the CPU. #
+            arrived = sorted( [ proc for proc in self._procs if proc._arrival == \
+                    self._ticker ], key = lambda obj : obj._pid )
+            for proc in arrived:
+                self.ready( proc, 0, rr_add )
+                print( "time {}ms: Process {} arrived and added to ready queue {}".format(\
+                        self._ticker, proc._pid, self.get_queue()) )
+
+        self._curr = (self._ready).popleft()
         (self._curr)._remaining -= 1
 
         self._context += 1
         self._preempt += 1
+
     # ------------------------------------------------------------------------ #
     # Overridden methods #
-    
+
     """
     Repr representation.
     :return:    raw representation of all data in CPU object.
@@ -333,9 +492,9 @@ def run_fcfs( procs ):
                             ('s' if (cpu._curr)._num != 1 else ''), cpu.get_queue() ) )
 
                     cpu._io[cpu._curr] = ( cpu._ticker + (cpu._curr)._io + (t_cs // 2) )
-                    print( "time {}ms: Process {} switching out of CPU; will block on I/O until time {}ms {}".format( \
+                    print( "time {}ms: Process {} switching out of CPU; will block on I/O until time {}ms {}".format(\
                             cpu._ticker, (cpu._curr)._pid, cpu._io[cpu._curr], \
-                            cpu.get_queue() ) )
+                            cpu.get_queue()) )
 
                 else:
                     # (cpu._curr)._num <= 0 #
@@ -349,34 +508,36 @@ def run_fcfs( procs ):
                 # (cpu._curr)._remaining > 0 #
                 (cpu._curr)._remaining -= 1
 
-        io_done = sorted( [ proc for proc, tick in (cpu._io).items() if tick == cpu._ticker ],
-                key = lambda obj : obj._pid )
+        io_done = sorted( [ proc for proc, tick in (cpu._io).items() if tick == \
+                cpu._ticker ], key = lambda obj : obj._pid )
         for proc in io_done:
             cpu.ready( proc )
             del cpu._io[proc]
             print( "time {}ms: Process {} completed I/O; added to ready queue {}".format(\
                     cpu._ticker, proc._pid, cpu.get_queue()) )
 
-        for proc in cpu._procs:
-            if ( proc._arrival == cpu._ticker ):
-                proc._last_arrival = cpu._ticker
-                cpu.ready( proc )
-                print( "time {}ms: Process {} arrived and added to ready queue {}".format(\
-                        cpu._ticker, proc._pid, cpu.get_queue()) )
+        arrived = sorted( [ proc for proc in cpu._procs if proc._arrival == \
+                cpu._ticker ], key = lambda obj : obj._pid )
+        for proc in arrived:
+            proc._last_arrival = cpu._ticker
+            cpu.ready( proc )
+            print( "time {}ms: Process {} arrived and added to ready queue {}".format(\
+                    cpu._ticker, proc._pid, cpu.get_queue()) )
 
         if ( removed ):
             cpu.remove()
 
         if ( cpu._curr == None ):
             if ( cpu._ready ):
-                cpu.add( (cpu._ready).popleft() )
+                # cpu.add( (cpu._ready).popleft() )
+                cpu.add()
                 (cpu._curr)._remaining = ( (cpu._curr)._burst - 1 )
                 print( "time {}ms: Process {} started using the CPU {}".format(\
                         cpu._ticker, (cpu._curr)._pid, cpu.get_queue()) )
 
         if ( len(cpu._finished) == n ):
             break
-        
+
         cpu._ticker += 1
 
     print( "time {}ms: Simulator ended for FCFS\n".format(cpu._ticker) )
@@ -408,9 +569,9 @@ def run_srt( procs ):
 
                     (cpu._curr)._remaining = (cpu._curr)._burst
                     cpu._io[cpu._curr] = ( cpu._ticker + (cpu._curr)._io + (t_cs // 2) )
-                    print( "time {}ms: Process {} switching out of CPU; will block on I/O until time {}ms {}".format( \
+                    print( "time {}ms: Process {} switching out of CPU; will block on I/O until time {}ms {}".format(\
                             cpu._ticker, (cpu._curr)._pid, cpu._io[cpu._curr], \
-                            cpu.get_queue() ) )
+                            cpu.get_queue()) )
 
                 else:
                     # (cpu._curr)._num <= 0 #
@@ -424,23 +585,21 @@ def run_srt( procs ):
                 # (cpu._curr)._remaining > 0 #
                 (cpu._curr)._remaining -= 1
 
-        io_done = sorted( [ proc for proc, tick in (cpu._io).items() if tick == cpu._ticker ],
-                key = lambda obj : (obj._remaining, obj._pid) )
+        io_done = sorted( [ proc for proc, tick in (cpu._io).items() if tick == \
+                cpu._ticker ], key = lambda obj : (obj._remaining, obj._pid) )
         if ( io_done ):
             if ( (cpu._curr) and (not removed) ):
                 if ( io_done[0]._remaining < (cpu._curr)._remaining ):
                     print( "time {}ms: Process {} completed I/O and will preempt {} {}".format(\
                             cpu._ticker, io_done[0]._pid, (cpu._curr)._pid, \
                             cpu.get_queue()) )
-                    cpu.preempt( io_done[0] )
+                    cpu.preempt_srt( io_done[0] )
                     print( "time {}ms: Process {} started using the CPU {}".format(\
                             cpu._ticker, (cpu._curr)._pid, cpu.get_queue()) )
                     del io_done[0]
 
             for proc in io_done:
-                cpu.ready( proc )
-                cpu._ready = deque( sorted( cpu._ready, 
-                        key = lambda obj : (obj._remaining, obj._pid) ) )
+                cpu.ready( proc, 1 )
                 print( "time {}ms: Process {} completed I/O; added to ready queue {}".format(\
                         cpu._ticker, proc._pid, cpu.get_queue()) )
 
@@ -452,24 +611,23 @@ def run_srt( procs ):
                     print( "time {}ms: Process {} arrived and will preempt {} {}".format(\
                             cpu._ticker, arrived[0]._pid, (cpu._curr)._pid, \
                             cpu.get_queue()) )
-                    cpu.preempt( arrived[0] )
+                    cpu.preempt_srt( arrived[0] )
                     print( "time {}ms: Process {} started using the CPU {}".format(\
                             cpu._ticker, (cpu._curr)._pid, cpu.get_queue()) )
                     del arrived[0]
 
             for proc in arrived:
-                cpu.ready( proc )
-                cpu._ready = deque( sorted( cpu._ready, 
-                        key = lambda obj : (obj._remaining, obj._pid) ) )
+                cpu.ready( proc, 1 )
                 print( "time {}ms: Process {} arrived and added to ready queue {}".format(\
                         cpu._ticker, proc._pid, cpu.get_queue()) )
-            
+
         if ( removed ):
-            cpu.remove()
+            cpu.remove( 1 )
 
         if ( cpu._curr == None ):
             if ( cpu._ready ):
-                cpu.add( (cpu._ready).popleft() )
+                # cpu.add( (cpu._ready).popleft() )
+                cpu.add( 1 )
                 (cpu._curr)._start = ( cpu._ticker - (t_cs // 2) )
                 if ( (cpu._curr)._remaining == (cpu._curr)._burst ):
                     (cpu._curr)._remaining = ( (cpu._curr)._burst - 1 )
@@ -484,9 +642,9 @@ def run_srt( procs ):
 
         if ( len(cpu._finished) == n ):
             break
-        
+
         cpu._ticker += 1
-    
+
     print( "time {}ms: Simulator ended for SRT\n".format(cpu._ticker) )
     cpu._avg_wait = cpu._total_wait / cpu._total_num
     cpu._avg_turnaround = cpu._avg_burst + cpu._avg_wait + t_cs + (t_cs*cpu._preempt)/cpu._total_num
@@ -510,7 +668,7 @@ def run_rr( procs ):
             if ( (cpu._curr)._remaining <= 0 ):
                 (cpu._curr)._num -= 1
                 if ( (cpu._curr)._num > 0 ):
-                    cpu._tslice = t_slice 
+                    cpu._t_slice = t_slice
                     print( "time {}ms: Process {} completed a CPU burst; {} burst{} to go {}".format( \
                             cpu._ticker, (cpu._curr)._pid, (cpu._curr)._num, \
                             ('s' if (cpu._curr)._num != 1 else ''), cpu.get_queue() ) )
@@ -528,77 +686,76 @@ def run_rr( procs ):
                     cpu._finished[cpu._curr] = cpu._ticker
 
                 removed = True
-            
-            elif(cpu._tslice == 0):
-                cpu._tslice = t_slice-1
-                if(cpu.get_queue() == "[Q <empty>]"):
-				    print( "time {}ms: Time slice expired; no preemption because ready queue is empty {}".format(cpu._ticker, \
-                            cpu.get_queue()) )
+
+            elif ( cpu._t_slice <= 0 ):
+                cpu._t_slice = ( t_slice - 1 )
+                if ( not cpu._ready ):
+                    (cpu._curr)._remaining -= 1
+                    print( "time {}ms: Time slice expired; no preemption because ready queue is empty {}".format(\
+                            cpu._ticker, cpu.get_queue()) )
+
                 else:
-                    print( "time {}ms: Time slice expired; process {} preempted with {}ms to go {}".format(cpu._ticker, \
-                             (cpu._curr)._pid, cpu._curr._remaining , cpu.get_queue()) )
+                    print( "time {}ms: Time slice expired; process {} preempted with {}ms to go {}".format(\
+                            cpu._ticker, (cpu._curr)._pid, cpu._curr._remaining, \
+                            cpu.get_queue()) )
                     if ( cpu._ready ):
-                        cpu.preempt_rr( (cpu._ready).popleft() )
-                #(cpu._curr)._start = ( cpu._ticker - (t_cs // 2) )
-                        if ( (cpu._curr)._remaining == (cpu._curr)._burst ):
+                        cpu.preempt_rr()
+                        if ( (cpu._curr)._remaining >= ((cpu._curr)._burst - 1) ):
                             (cpu._curr)._remaining = ( (cpu._curr)._burst - 1 )
                             print( "time {}ms: Process {} started using the CPU {}".format(\
                                 cpu._ticker, (cpu._curr)._pid, cpu.get_queue()) )
 
                         else:
-                    # (cpu._curr)._remaining != (cpu._curr)._burst #
+                            # (cpu._curr)._remaining != (cpu._curr)._burst #
                             print( "time {}ms: Process {} started using the CPU with {}ms remaining {}".format( \
                                 cpu._ticker, (cpu._curr)._pid, ((cpu._curr)._remaining + 1),
                                 cpu.get_queue() ) )
 
-				
-			
             else:
                 # (cpu._curr)._remaining > 0 #
                 (cpu._curr)._remaining -= 1
-                cpu._tslice -= 1
+                cpu._t_slice -= 1
 
-        io_done = sorted( [ proc for proc, tick in (cpu._io).items() if tick <= cpu._ticker ],
-                key = lambda obj : obj._pid )
+        io_done = sorted( [ proc for proc, tick in (cpu._io).items() if tick <= \
+                cpu._ticker ], key = lambda obj : obj._pid )
         for proc in io_done:
             cpu.ready( proc )
             del cpu._io[proc]
             print( "time {}ms: Process {} completed I/O; added to ready queue {}".format(\
                     cpu._ticker, proc._pid, cpu.get_queue()) )
 
-        for proc in cpu._procs:
-            if ( proc._arrival == cpu._ticker ):
-                proc._last_arrival = cpu._ticker
-                cpu.ready( proc )
-                print( "time {}ms: Process {} arrived and added to ready queue {}".format(\
-                        cpu._ticker, proc._pid, cpu.get_queue()) )
+        arrived = sorted( [ proc for proc in cpu._procs if proc._arrival == \
+                cpu._ticker ], key = lambda obj : obj._pid )
+        for proc in arrived:
+            # proc._last_arrival = cpu._ticker
+            cpu.ready( proc )
+            print( "time {}ms: Process {} arrived and added to ready queue {}".format(\
+                    cpu._ticker, proc._pid, cpu.get_queue()) )
 
         if ( removed ):
-            cpu.remove()
+            cpu.remove( 0, rr_add )
 
         if ( cpu._curr == None ):
-            cpu._tslice = t_slice-1
+            cpu._t_slice = ( t_slice - 1 )
             if ( cpu._ready ):
-                cpu.add( (cpu._ready).popleft() )
+                # cpu.add( (cpu._ready).popleft() )
+                cpu.add( 0, rr_add )
                 if ( (cpu._curr)._remaining == (cpu._curr)._burst ):
                     (cpu._curr)._remaining = ( (cpu._curr)._burst - 1 )
                     print( "time {}ms: Process {} started using the CPU {}".format(\
                         cpu._ticker, (cpu._curr)._pid, cpu.get_queue()) )
 
                 else:
-                    (cpu._curr)._remaining = ( (cpu._curr)._remaining - 1 )
+                    (cpu._curr)._remaining -= 1
                     print( "time {}ms: Process {} started using the CPU with {}ms remaining {}".format( \
                         cpu._ticker, (cpu._curr)._pid, ((cpu._curr)._remaining + 1),
                         cpu.get_queue() ) )
 
-                #print( "time {}ms: Process {} started using the CPU {}".format(\
-                #        cpu._ticker, (cpu._curr)._pid, cpu.get_queue()) )
-
         if ( len(cpu._finished) == n ):
             break
-        
+
         cpu._ticker += 1
-	
+
     print( "time {}ms: Simulator ended for RR".format(cpu._ticker) )
     cpu._avg_turnaround = cpu._total_turnaround / cpu._total_num
     cpu._avg_wait = cpu._total_wait / cpu._total_num
@@ -635,7 +792,7 @@ if ( __name__ == "__main__" ):
                     print( "  " + str(proc) )
 
             fcfs_res = run_fcfs( procs )
-            #srt_res = run_srt( procs )
+            srt_res = run_srt( procs )
             rr_res = run_rr( procs )
 
             simple_out = []
@@ -644,8 +801,8 @@ if ( __name__ == "__main__" ):
             simple_out.append( "Algorithm FCFS\n" )
             simple_out = build_simple( simple_out, fcfs_res )
             # Add SRT results. #
-            #simple_out.append( "Algorithm SRT\n" )
-            #simple_out = build_simple( simple_out, srt_res )
+            simple_out.append( "Algorithm SRT\n" )
+            simple_out = build_simple( simple_out, srt_res )
             # Add RR results. #
             simple_out.append( "Algorithm RR\n" )
             simple_out = build_simple( simple_out, rr_res )
