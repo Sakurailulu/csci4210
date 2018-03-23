@@ -329,7 +329,31 @@ class CPU:
     """
     """
     def preempt_rr( self ):
-        # Check for I/O completion and new arrivals during context switch. #
+		# Add to start of ready queue if rr_add is true (add to BEGINNING). #
+        if ( rr_add ):
+            (self._ready).appendleft( self._curr )
+
+        else:
+            (self._ready).append( self._curr )
+
+        # Check for I/O completion and new arrivals before context switch. #
+        io_done = sorted( [ proc for proc, tick in (self._io).items() \
+                    if tick == self._ticker ], key = lambda obj : obj._pid )
+        for proc in io_done:
+            self.ready( proc, 0, rr_add )
+            del self._io[proc]
+            print( "time {}ms: Process {} completed I/O; added to ready queue {}".format(\
+                    self._ticker, proc._pid, self.get_queue()) )
+
+            # Find process that have arrived to the CPU. #
+        arrived = sorted( [ proc for proc in self._procs if proc._arrival == \
+                self._ticker ], key = lambda obj : obj._pid )
+        for proc in arrived:
+            self.ready( proc, 0, rr_add )
+            print( "time {}ms: Process {} arrived and added to ready queue {}".format(\
+                    self._ticker, proc._pid, self.get_queue()) )
+
+		# Check for I/O completion and new arrivals during context switch. #
         ## First half of switch. ##
         for _ in range( t_cs // 2 ):
             self._ticker += 1
@@ -353,14 +377,7 @@ class CPU:
 
         # (self._curr)._readied = self._ticker
         # self._curr = None
-
-        # Add to start of ready queue if rr_add is true (add to BEGINNING). #
-        if ( rr_add ):
-            (self._ready).appendleft( self._curr )
-
-        else:
-            (self._ready).append( self._curr )
-
+        
         # Check for I/O completion and new arrivals during context switch. #
         ## Second half of switch. ##
         for _ in range( t_cs // 2 ):
