@@ -162,6 +162,24 @@ class CPU:
                 (3) new process arrival is checked and added to self._ready.
     """
     def add( self, srt = 0, side = 0 ):
+        # Check for I/O completion and new arrivals before context switch. #
+        io_done = sorted( [ proc for proc, tick in (self._io).items() \
+                if (tick == self._ticker and proc not in self._ready) ], key = \
+                lambda obj : obj._pid )
+        for proc in io_done:
+            self.ready( proc, 0, rr_add )
+            del self._io[proc]
+            print( "time {}ms: Process {} completed I/O; added to ready queue {}".format(\
+                    self._ticker, proc._pid, self.get_queue()) )
+
+        arrived = sorted( [ proc for proc in self._procs if (proc._arrival == \
+                self._ticker and proc not in self._ready) ], key = \
+                lambda obj : obj._pid )
+        for proc in arrived:
+            self.ready( proc, 0, rr_add )
+            print( "time {}ms: Process {} arrived and added to ready queue {}".format(\
+                    self._ticker, proc._pid, self.get_queue()) )
+
         # Add next process in ready queue. #
         self._curr = (self._ready).popleft()
         self._total_wait += ( self._ticker - (self._curr)._readied )
@@ -220,6 +238,24 @@ class CPU:
                 (3) new process arrival is checked and added to self._ready.
     """
     def remove( self, srt = 0, side = 0 ):
+        # Check for I/O completion and new arrivals before context switch. #
+        io_done = sorted( [ proc for proc, tick in (self._io).items() \
+                if (tick == self._ticker and proc not in self._ready) ], key = \
+                lambda obj : obj._pid )
+        for proc in io_done:
+            self.ready( proc, 0, rr_add )
+            del self._io[proc]
+            print( "time {}ms: Process {} completed I/O; added to ready queue {}".format(\
+                    self._ticker, proc._pid, self.get_queue()) )
+
+        arrived = sorted( [ proc for proc in self._procs if (proc._arrival == \
+                self._ticker and proc not in self._ready) ], key = \
+                lambda obj : obj._pid )
+        for proc in arrived:
+            self.ready( proc, 0, rr_add )
+            print( "time {}ms: Process {} arrived and added to ready queue {}".format(\
+                    self._ticker, proc._pid, self.get_queue()) )
+
         # Check for I/O completion and new arrivals during context switch. #
         for _ in range( t_cs // 2 ):
             self._ticker += 1
@@ -268,6 +304,24 @@ class CPU:
     :param:     proc, preempting process
     """
     def preempt_srt( self, proc ):
+        # Check for I/O completion and new arrivals before context switch. #
+        io_done = sorted( [ p for p, tick in (self._io).items() \
+                if (tick == self._ticker and p not in self._ready and p != proc) ], \
+                key = lambda obj : obj._pid )
+        for proc in io_done:
+            self.ready( proc, 0, rr_add )
+            del self._io[proc]
+            print( "time {}ms: Process {} completed I/O; added to ready queue {}".format(\
+                    self._ticker, proc._pid, self.get_queue()) )
+
+        arrived = sorted( [ p for p in self._procs if (p._arrival == \
+                self._ticker and p not in self._ready and p != proc) ], key = \
+                lambda obj : obj._pid )
+        for proc in arrived:
+            self.ready( proc, 0, rr_add )
+            print( "time {}ms: Process {} arrived and added to ready queue {}".format(\
+                    self._ticker, proc._pid, self.get_queue()) )
+
         # Check for I/O completion and new arrivals during context switch. #
         ## First half of switch. ##
         for _ in range( t_cs // 2 ):
@@ -291,7 +345,6 @@ class CPU:
                 print( "time {}ms: Process {} arrived and added to ready queue {}".format(\
                         self._ticker, proc._pid, self.get_queue()) )
 
-        # (self._curr)._readied = self._ticker
         (self._ready).appendleft( self._curr )
         # self._curr = None
 
@@ -329,31 +382,25 @@ class CPU:
     """
     """
     def preempt_rr( self ):
-		# Add to start of ready queue if rr_add is true (add to BEGINNING). #
-        if ( rr_add ):
-            (self._ready).appendleft( self._curr )
-
-        else:
-            (self._ready).append( self._curr )
-
         # Check for I/O completion and new arrivals before context switch. #
         io_done = sorted( [ proc for proc, tick in (self._io).items() \
-                    if tick == self._ticker ], key = lambda obj : obj._pid )
+                if (tick == self._ticker and proc not in self._ready) ], key = \
+                lambda obj : obj._pid )
         for proc in io_done:
             self.ready( proc, 0, rr_add )
             del self._io[proc]
             print( "time {}ms: Process {} completed I/O; added to ready queue {}".format(\
                     self._ticker, proc._pid, self.get_queue()) )
 
-            # Find process that have arrived to the CPU. #
-        arrived = sorted( [ proc for proc in self._procs if proc._arrival == \
-                self._ticker ], key = lambda obj : obj._pid )
+        arrived = sorted( [ proc for proc in self._procs if (proc._arrival == \
+                self._ticker and proc not in self._ready) ], key = \
+                lambda obj : obj._pid )
         for proc in arrived:
             self.ready( proc, 0, rr_add )
             print( "time {}ms: Process {} arrived and added to ready queue {}".format(\
                     self._ticker, proc._pid, self.get_queue()) )
 
-		# Check for I/O completion and new arrivals during context switch. #
+        # Check for I/O completion and new arrivals during context switch. #
         ## First half of switch. ##
         for _ in range( t_cs // 2 ):
             self._ticker += 1
@@ -375,9 +422,15 @@ class CPU:
                 print( "time {}ms: Process {} arrived and added to ready queue {}".format(\
                         self._ticker, proc._pid, self.get_queue()) )
 
-        # (self._curr)._readied = self._ticker
-        # self._curr = None
-        
+        # Add to start of ready queue if rr_add is true (add to BEGINNING). #
+        if ( rr_add ):
+            (self._ready).appendleft( self._curr )
+
+        else:
+            (self._ready).append( self._curr )
+
+        tmp = (self._ready).popleft()
+
         # Check for I/O completion and new arrivals during context switch. #
         ## Second half of switch. ##
         for _ in range( t_cs // 2 ):
@@ -400,7 +453,7 @@ class CPU:
                 print( "time {}ms: Process {} arrived and added to ready queue {}".format(\
                         self._ticker, proc._pid, self.get_queue()) )
 
-        self._curr = (self._ready).popleft()
+        self._curr = tmp
         (self._curr)._remaining -= 1
 
         self._context += 1
