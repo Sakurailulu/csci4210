@@ -167,7 +167,7 @@ class CPU:
                 if (tick == self._ticker and proc not in self._ready) ], key = \
                 lambda obj : obj._pid )
         for proc in io_done:
-            self.ready( proc, 0, rr_add )
+            self.ready( proc, srt, side )
             del self._io[proc]
             print( "time {}ms: Process {} completed I/O; added to ready queue {}".format(\
                     self._ticker, proc._pid, self.get_queue()) )
@@ -176,14 +176,11 @@ class CPU:
                 self._ticker and proc not in self._ready) ], key = \
                 lambda obj : obj._pid )
         for proc in arrived:
-            self.ready( proc, 0, rr_add )
+            self.ready( proc, srt, side )
             print( "time {}ms: Process {} arrived and added to ready queue {}".format(\
                     self._ticker, proc._pid, self.get_queue()) )
 
-        # Add next process in ready queue. #
-        self._curr = (self._ready).popleft()
-        self._total_wait += ( self._ticker - (self._curr)._readied )
-        (self._curr)._start = self._ticker
+        tmp = (self._ready).popleft()
 
         # Check for I/O completion and new arrivals during context switch. #
         for _ in range( t_cs // 2 ):
@@ -223,7 +220,27 @@ class CPU:
                 print( "time {}ms: Process {} arrived and added to ready queue {}".format(\
                         self._ticker, proc._pid, self.get_queue()) )
 
-        self._context += 1
+        self._curr = tmp
+        if ( (srt) and (self._ready) ):
+            if ( (self._ready[0])._remaining < tmp._remaining ):
+                # preempt #
+                preempting = (self._ready).popleft()
+                self._ticker = preempting._readied
+                self.preempt_srt( preempting )
+
+            else:
+                # Add next process in ready queue. #
+                # self._curr = tmp
+                self._total_wait += ( self._ticker - (self._curr)._readied - (t_cs // 2) )
+                (self._curr)._start = ( self._ticker - (t_cs // 2) )
+                self._context += 1
+
+        else:
+            # Add next process in ready queue. #
+            # self._curr = tmp
+            self._total_wait += ( self._ticker - (self._curr)._readied - (t_cs // 2) )
+            (self._curr)._start = ( self._ticker - (t_cs // 2) )
+            self._context += 1
 
 
     """
@@ -243,7 +260,7 @@ class CPU:
                 if (tick == self._ticker and proc not in self._ready) ], key = \
                 lambda obj : obj._pid )
         for proc in io_done:
-            self.ready( proc, 0, rr_add )
+            self.ready( proc, srt, side )
             del self._io[proc]
             print( "time {}ms: Process {} completed I/O; added to ready queue {}".format(\
                     self._ticker, proc._pid, self.get_queue()) )
@@ -252,7 +269,7 @@ class CPU:
                 self._ticker and proc not in self._ready) ], key = \
                 lambda obj : obj._pid )
         for proc in arrived:
-            self.ready( proc, 0, rr_add )
+            self.ready( proc, srt, side )
             print( "time {}ms: Process {} arrived and added to ready queue {}".format(\
                     self._ticker, proc._pid, self.get_queue()) )
 
@@ -309,7 +326,7 @@ class CPU:
                 if (tick == self._ticker and p not in self._ready and p != proc) ], \
                 key = lambda obj : obj._pid )
         for proc in io_done:
-            self.ready( proc, 0, rr_add )
+            self.ready( proc, 1 )
             del self._io[proc]
             print( "time {}ms: Process {} completed I/O; added to ready queue {}".format(\
                     self._ticker, proc._pid, self.get_queue()) )
@@ -318,7 +335,7 @@ class CPU:
                 self._ticker and p not in self._ready and p != proc) ], key = \
                 lambda obj : obj._pid )
         for proc in arrived:
-            self.ready( proc, 0, rr_add )
+            self.ready( proc, 1 )
             print( "time {}ms: Process {} arrived and added to ready queue {}".format(\
                     self._ticker, proc._pid, self.get_queue()) )
 
@@ -332,7 +349,7 @@ class CPU:
                     if tick == self._ticker ], key = lambda obj : (obj._remaining, \
                     obj._pid) )
             for proc in io_done:
-                self.ready( proc, 1, 1 )
+                self.ready( proc, 1 )
                 del self._io[proc]
                 print( "time {}ms: Process {} completed I/O; added to ready queue {}".format(\
                         self._ticker, proc._pid, self.get_queue()) )
@@ -341,7 +358,7 @@ class CPU:
             arrived = sorted( [ proc for proc in self._procs if proc._arrival == \
                     self._ticker ], key = lambda obj : (obj._remaining, obj._pid) )
             for proc in arrived:
-                self.ready( proc, 1, 1 )
+                self.ready( proc, 1 )
                 print( "time {}ms: Process {} arrived and added to ready queue {}".format(\
                         self._ticker, proc._pid, self.get_queue()) )
 
