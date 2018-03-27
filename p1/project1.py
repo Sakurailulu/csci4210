@@ -1,3 +1,5 @@
+#!/usr/bin/python3
+
 """
 project1.py
 Griffin Melnick, melnig@rpi.edu
@@ -85,13 +87,13 @@ class CPU:
         self._procs = procs                     # processes found in input file #
 
         # Helper details. #
-        self._total_turnaround = float( 0 )     # total turnaround time #
+        self._total_burst = float( sum( [(proc._burst * proc._num) for proc in self._procs] ) )
         self._total_wait = float( 0 )           # total wait time #
+        self._total_turnaround = float( 0 )     # total turnaround time #
         self._total_num = float( sum( [proc._num for proc in self._procs] ) )
 
         # Simple output details. #
-        self._avg_burst = ( sum( [(proc._burst * proc._num) for proc in self._procs] )\
-                 / self._total_num )
+        self._avg_burst = ( self._total_burst / self._total_num )
         self._avg_wait = 0
         self._avg_turnaround = 0
         self._context = 0
@@ -128,14 +130,14 @@ class CPU:
     """
     Adds process to ready queue.
     :param:     proc, readying process.
-                srt, boolean to work in SRT mode (preemptions).
+                srt, boolean to work in SRT mode (sort by remaining).
                     [defaults to false]
                 side, boolean to determine readying to start or end of queue.
                     [defaults to false]
     """
     def ready( self, proc, srt = 0, side = 0 ):
         proc._readied = self._ticker
-        # proc._last_arrival = self._ticker
+        proc._last_readied = self._ticker
 
         # Add to start of ready queue if rr_add is true (add to BEGINNING). #
         if ( not side ):
@@ -223,21 +225,18 @@ class CPU:
         self._curr = tmp
         if ( (srt) and (self._ready) ):
             if ( (self._ready[0])._remaining < tmp._remaining ):
-                # preempt #
                 preempting = (self._ready).popleft()
                 self._ticker = preempting._readied
                 self.preempt_srt( preempting )
 
             else:
                 # Add next process in ready queue. #
-                # self._curr = tmp
                 self._total_wait += ( self._ticker - (self._curr)._readied - (t_cs // 2) )
                 (self._curr)._start = ( self._ticker - (t_cs // 2) )
                 self._context += 1
 
         else:
             # Add next process in ready queue. #
-            # self._curr = tmp
             self._total_wait += ( self._ticker - (self._curr)._readied - (t_cs // 2) )
             (self._curr)._start = ( self._ticker - (t_cs // 2) )
             self._context += 1
@@ -362,7 +361,7 @@ class CPU:
                 print( "time {}ms: Process {} arrived and added to ready queue {}".format(\
                         self._ticker, proc._pid, self.get_queue()) )
 
-        (self._ready).appendleft( self._curr )
+        self.ready( self._curr, 0, 1 )
         # self._curr = None
 
         # Check for I/O completion and new arrivals during context switch. #
@@ -439,14 +438,17 @@ class CPU:
                 print( "time {}ms: Process {} arrived and added to ready queue {}".format(\
                         self._ticker, proc._pid, self.get_queue()) )
 
-        # Add to start of ready queue if rr_add is true (add to BEGINNING). #
-        if ( rr_add ):
-            (self._ready).appendleft( self._curr )
-
-        else:
-            (self._ready).append( self._curr )
 
         tmp = (self._ready).popleft()
+
+        # Add to start of ready queue if rr_add is true (add to BEGINNING). #
+        # self.ready( self._curr, 0, rr_add )
+        #if ( rr_add ):
+        #    (self._ready).appendleft( self._curr )
+
+        #else:
+        (self._ready).append( self._curr )
+        (self._curr)._last_readied = self._ticker
 
         # Check for I/O completion and new arrivals during context switch. #
         ## Second half of switch. ##
@@ -472,6 +474,7 @@ class CPU:
 
         self._curr = tmp
         (self._curr)._remaining -= 1
+        # self._total_wait += ( self._ticker - (self._curr)._readied )
 
         self._context += 1
         self._preempt += 1
@@ -734,7 +737,8 @@ def run_srt( procs ):
 
     print( "time {}ms: Simulator ended for SRT\n".format(cpu._ticker) )
     cpu._avg_wait = cpu._total_wait / cpu._total_num
-    cpu._avg_turnaround = cpu._avg_burst + cpu._avg_wait + t_cs + (t_cs*cpu._preempt)/cpu._total_num
+    cpu._total_turnaround = cpu._total_burst + cpu._total_wait + ( (t_cs // 2) *  cpu._context )
+    cpu._avg_turnaround = ( cpu._total_turnaround / cpu._total_num ) + t_cs
     #cpu._avg_turnaround = cpu._total_turnaround / cpu._total_num
     return ( cpu._avg_burst, cpu._avg_wait, cpu._avg_turnaround, \
             cpu._context, cpu._preempt )
@@ -806,7 +810,7 @@ def run_rr( procs ):
         io_done = sorted( [ proc for proc, tick in (cpu._io).items() if tick <= \
                 cpu._ticker ], key = lambda obj : obj._pid )
         for proc in io_done:
-            cpu.ready( proc )
+            cpu.ready( proc, 0, rr_add )
             del cpu._io[proc]
             print( "time {}ms: Process {} completed I/O; added to ready queue {}".format(\
                     cpu._ticker, proc._pid, cpu.get_queue()) )
@@ -815,7 +819,7 @@ def run_rr( procs ):
                 cpu._ticker ], key = lambda obj : obj._pid )
         for proc in arrived:
             # proc._last_arrival = cpu._ticker
-            cpu.ready( proc )
+            cpu.ready( proc, 0, rr_add )
             print( "time {}ms: Process {} arrived and added to ready queue {}".format(\
                     cpu._ticker, proc._pid, cpu.get_queue()) )
 
@@ -844,8 +848,8 @@ def run_rr( procs ):
         cpu._ticker += 1
 
     print( "time {}ms: Simulator ended for RR".format(cpu._ticker) )
-    cpu._avg_turnaround = cpu._total_turnaround / cpu._total_num
     cpu._avg_wait = cpu._total_wait / cpu._total_num
+    cpu._avg_turnaround = cpu._total_turnaround / cpu._total_num
     return ( cpu._avg_burst, cpu._avg_wait, cpu._avg_turnaround, \
             cpu._context, cpu._preempt )
 
