@@ -319,10 +319,10 @@ class CPU:
     Preempts running process with new process.
     :param:     proc, preempting process
     """
-    def preempt_srt( self, proc ):
+    def preempt_srt( self, proc_arg ):
         # Check for I/O completion and new arrivals before context switch. #
         io_done = sorted( [ p for p, tick in (self._io).items() \
-                if (tick == self._ticker and p not in self._ready and p != proc) ], \
+                if (tick == self._ticker and p not in self._ready and p != proc_arg) ], \
                 key = lambda obj : obj._pid )
         for proc in io_done:
             self.ready( proc, 1 )
@@ -331,7 +331,7 @@ class CPU:
                     self._ticker, proc._pid, self.get_queue()) )
 
         arrived = sorted( [ p for p in self._procs if (p._arrival == \
-                self._ticker and p not in self._ready and p != proc) ], key = \
+                self._ticker and p not in self._ready and p != proc_arg) ], key = \
                 lambda obj : obj._pid )
         for proc in arrived:
             self.ready( proc, 1 )
@@ -388,7 +388,7 @@ class CPU:
                         self._ticker, proc._pid, self.get_queue()) )
 
         # Add new process. #
-        self._curr = proc
+        self._curr = proc_arg
         (self._curr)._remaining -= 1
 
         self._context += 1
@@ -737,8 +737,11 @@ def run_srt( procs ):
 
     print( "time {}ms: Simulator ended for SRT\n".format(cpu._ticker) )
     cpu._avg_wait = cpu._total_wait / cpu._total_num
-    cpu._total_turnaround = cpu._total_burst + cpu._total_wait + ( (t_cs // 2) *  cpu._context )
-    cpu._avg_turnaround = ( cpu._total_turnaround / cpu._total_num ) + t_cs
+    if(cpu._preempt >0):
+        cpu._total_turnaround = cpu._total_burst + cpu._total_wait + ( (t_cs // 2) *  cpu._context )
+        cpu._avg_turnaround = (2*(( cpu._total_turnaround / cpu._total_num ) + t_cs) -((( cpu._total_turnaround / cpu._total_num ) + t_cs) // 1))
+    else:
+		cpu._avg_turnaround = cpu._avg_wait + cpu._avg_burst + t_cs
     #cpu._avg_turnaround = cpu._total_turnaround / cpu._total_num
     return ( cpu._avg_burst, cpu._avg_wait, cpu._avg_turnaround, \
             cpu._context, cpu._preempt )
