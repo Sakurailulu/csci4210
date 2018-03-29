@@ -522,10 +522,10 @@ Helper method to read in file input.
 """
 def read_file( f_name ):
     pwd = os.path.dirname( __file__ )
-    path = os.path.join( pwd, f_name )
+    #path = os.path.join( pwd, f_name )
 
     try:
-        f = open( path, 'r' )
+        f = open( f_name, 'r' )
     except:
         return os.EX_IOERR
 
@@ -741,7 +741,7 @@ def run_srt( procs ):
         cpu._total_turnaround = cpu._total_burst + cpu._total_wait + ( (t_cs // 2) *  cpu._context )
         cpu._avg_turnaround = (2*(( cpu._total_turnaround / cpu._total_num ) + t_cs) -((( cpu._total_turnaround / cpu._total_num ) + t_cs) // 1))
     else:
-		cpu._avg_turnaround = cpu._avg_wait + cpu._avg_burst + t_cs
+        cpu._avg_turnaround = cpu._avg_wait + cpu._avg_burst + t_cs
     #cpu._avg_turnaround = cpu._total_turnaround / cpu._total_num
     return ( cpu._avg_burst, cpu._avg_wait, cpu._avg_turnaround, \
             cpu._context, cpu._preempt )
