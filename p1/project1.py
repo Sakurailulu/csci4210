@@ -291,8 +291,8 @@ class CPU:
             for proc in io_done:
                 self.ready( proc, srt )
                 del self._io[proc]
-                print( ("time {}ms: Process {} completed I/O; added to ready queue " + \
-                        "{}").format(self._ticker, proc._pid, self.get_queue()) )
+                print( ("time {}ms: Process {} completed I/O; added to ready " + \
+                        "queue {}").format(self._ticker, proc._pid, self.get_queue()) )
 
             # Find process that have arrived to the CPU. #
             if ( srt ):
@@ -481,7 +481,7 @@ class CPU:
 
         self._curr = tmp
         (self._curr)._remaining -= 1
-        self._total_wait += ( self._ticker - (self._curr)._last_readied )
+        # self._total_wait += ( self._ticker - (self._curr)._last_readied )
 
         self._context += 1
         self._preempt += 1
@@ -859,7 +859,7 @@ if ( __name__ == "__main__" ):
         simout["RR"] = run_rr( procs )
 
         # Write results to simple output file. #
-        for algo, res in simout.items():
+        for algo, res in sorted( simout.items(), key = lambda t : (not len(t[0])) ):
             f_out.write( "Algorithm {}\n".format(algo) )
             f_out.write( "-- average CPU burst time: {0:.2f} ms\n".format(res[0]) )
             f_out.write( "-- average wait time: {0:.2f} ms\n".format(res[1]) )
