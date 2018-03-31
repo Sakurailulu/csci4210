@@ -44,9 +44,10 @@ const Coord all[8] = { (Coord){ ._x = +1, ._y = -2 },   /* up, then right */
 /* -------------------------------------------------------------------------- */
 
 int arrayMax( int n, int nums[] );
+int findPoss( Board bd, Coord moves[] );
 void freeBoard( Board * bd );
-void printBoard( Board bd, pthread_t tid, bool debug );
-int tour( Board bd );
+void printBoard( Board bd, bool debug );
+int tour( Board bd, int * seen, Board * bds );
 
 /* -------------------------------------------------------------------------- */
 
@@ -61,6 +62,31 @@ int arrayMax( int n, int nums[] ) {
         max = ( (nums[i] > max) ? nums[i] : max );
     }
     return max;
+}
+
+
+/* Helper to find all possible moves from current position.
+ * @param
+ * @return      count of valid moves found.
+ */
+int findPoss( Board bd, Coord moves[] ) {
+    int poss = 0;
+    for ( int i = 0; i < 8; ++i ) {
+        Coord to = (Coord){ ._x = ( (bd._curr)._x + all[i]._x ), 
+                            ._y = ( (bd._curr)._y + all[i]._y ) };
+        if ( ( (0 <= to._x) && (to._x < bd._cols) ) && 
+                ( (0 <= to._y) && (to._y < bd._rows) ) && 
+                (bd._grid[to._y][to._x] != 'k') ) {
+            moves[poss] = to;
+            ++poss;
+
+#ifdef DEBUG_MODE
+            printf( " > poss. move at (%d, %d)\n", to._x, to._y );
+            fflush( stdout );
+#endif
+        }
+    }
+    return poss;
 }
 
     
@@ -79,16 +105,22 @@ void freeBoard( Board * bd ) {
 
 /* Board printing helper.
  * @param       bd, Board to print.
- *              tid, thread id.
  *              debug, whether to include tid or not.
  */
-void printBoard( Board bd, pthread_t tid, bool debug ) {
+void printBoard( Board bd, bool debug ) {
     for ( int i = 0; i < bd._rows; ++i ) {
-        if ( !debug ) { printf( "THREAD %u", (unsigned int)tid ); }
+        if ( !debug ) { printf( "THREAD %u", (unsigned int)pthread_self() ); }
         if ( i <= 0 ) { printf( " > %s\n", bd._grid[i] ); }
         else {          printf( "   %s\n", bd._grid[i] ); }
         fflush( stdout );
     }
+}
+
+
+/* Touring simulation. */
+int tour( Board bd, int * seen, Board * bds ) {
+    int maxTour = 1;
+    return maxTour;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -97,7 +129,16 @@ int main( int argc, char * argv[] ) {
     if ( (argc == 3) || (argc == 4) ) {
         /* Check that 'm' and 'n' are greater than two. */
         char * tmp;
-        const int m = strtol( argv[1], &tmp, 10 ), n = strtol( argv[2], &tmp, 10 );
+        int m = strtol( argv[1], &tmp, 10 ), n = strtol( argv[2], &tmp, 10 ), 
+                k = -1;
+        if ( argc == 4 ) {
+            k = strtol( argv[3], &tmp, 10 );
+            if ( (k <= 0) || ( k > (m * n) ) ) {
+                fprintf( stderr, "ERROR: Invalid argument(s)\n" );
+                fprintf( stderr, "USAGE: a.out <m> <n> [<k>]\n" );
+                return EXIT_FAILURE;
+            }
+        }
 
         if ( (m > 2) && (n > 2) ) {
             /* Board initialization. */
@@ -138,12 +179,27 @@ int main( int argc, char * argv[] ) {
                     bd._cols, bd._rows, bd._moves, (bd._curr)._x, (bd._curr)._y );
             fflush( stdout );
 
-            printBoard( bd, 0, 1 );
+            printBoard( bd, 1 );
             printf( '\n' );
             fflush( stdout );
 #endif
 
-            /* tour */
+            printf( "THREAD %u: Solving the knight's tour problem for a %dx%d board\n",
+                    (unsigned int)pthread_self(), bd._rows, bd._cols );
+            fflush( stdout );
+
+            int seen = 0;
+            Board * bds = calloc( 0, BOARD_SIZE );
+            int maxTour = tour( bd, &seen, bds );
+
+            printf( "THREAD %u: Best solution found visits %d squares (out of %d)\n",
+                    (unsigned int)pthread_self(), maxTour, (bd._cols * bd._rows) );
+            fflush( stdout );
+            for ( int i = 0; i < seen; ++i ) {
+               printBoard( bds[i], 0 );
+            }
+
+            return EXIT_SUCCESS;
         } else {
             /* (m <= 2) || (n <= 2) :: invalid arguments */
             fprintf( stderr, "ERROR: Invalid argument(s)\n" );
