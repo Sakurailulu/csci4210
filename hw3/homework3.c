@@ -7,7 +7,7 @@
  *
  * where: <m> is the width, number of columns, of the board; <n> is the height, 
  * number of rows, of the board; and the optional <k> is the fewest number of 
- * squares allowed on boards printed out.
+ * squares allowed on dead end boards printed out.
  */
 
 #include <limits.h>
@@ -48,7 +48,7 @@ int findPoss( Board bd, Coord moves[] );
 void freeBoard( Board * bd );
 void printBoard( Board bd, bool debug );
 void step( Board * bd, Coord to );
-void tour( Board bd, Board * bds, int * seen, int * maxTour );
+void tour( Board bd, Board ** bds, int * seen, int * maxTour );
 
 /* -------------------------------------------------------------------------- */
 
@@ -136,14 +136,14 @@ void step( Board * bd, Coord to ) {
 
 /* Touring simulation.
  * @param       bd, Board to tour.
- *              bds, Board pointer to tracker of all Boards made.
+ *              bds, pointer to Board pointer to tracker of all Boards made.
  *              seen, int pointer to length tracker for 'bds'.
  *              maxTour, int pointer to maximum found solution.
  * @modifies    seen, bds
  * @effects     increments 'seen' to count of Boards seen.
  *              adds all Boards seen to 'bds'.
  */
-void tour( Board bd, Board * bds, int * seen, int * maxTour ) {
+void tour( Board bd, Board ** bds, int * seen, int * maxTour ) {
     /* Find possible moves. */
     Coord moves[8];
     int poss = findPoss( bd, moves );
@@ -151,8 +151,8 @@ void tour( Board bd, Board * bds, int * seen, int * maxTour ) {
     /* Determine which path to follow ( multiple moves, one move, dead end ). */
     if ( poss > 0 ) {
         if ( poss > 1 ) {
-            printf( "THREAD %u: %d moves possible after move #%d; creating threads\n",
-                    (unsigned int)pthread_self(), poss, bd._moves );
+            printf( "THREAD %u: %d moves possible after move #%d; creating \
+                    threads\n", (unsigned int)pthread_self(), poss, bd._moves );
         } else {
             /* poss == 1 :: don't create new thread */
             step( &bd, moves[0] );
@@ -163,6 +163,11 @@ void tour( Board bd, Board * bds, int * seen, int * maxTour ) {
         printf( "THREAD %u: Dead end after move #%d\n", 
                 (unsigned int)pthread_self(), bd._moves );
         fflush( stdout );
+
+        /* Add dead end Board to tracker. */
+        ++(*seen);
+        *bds = realloc( *bds, ( (*seen + 1) * BOARD_SIZE ) );
+        *bds[*seen] = bd;
     }
 }
 
@@ -199,8 +204,8 @@ int main( int argc, char * argv[] ) {
             for ( int i = 0; i < bd._rows; ++i ) {
                 bd._grid[i] = calloc( (bd._cols + 1), sizeof(char) );
                 if ( !bd._grid[i] ) {
-                    fprintf( stderr, ("ERROR: Could not allocate memory for row %d"), 
-                            (i + 1) );
+                    fprintf( stderr, ("ERROR: Could not allocate memory for \
+                            row %d"), (i + 1) );
                     return EXIT_FAILURE;
                 } else {
                     /* bd._grid[i] :: allocation successful, fill with markers */
@@ -227,8 +232,8 @@ int main( int argc, char * argv[] ) {
             fflush( stdout );
 #endif
 
-            printf( "THREAD %u: Solving the knight's tour problem for a %dx%d board\n",
-                    (unsigned int)pthread_self(), bd._rows, bd._cols );
+            printf( "THREAD %u: Solving the knight's tour problem for a %dx%d \
+                    board\n", (unsigned int)pthread_self(), bd._rows, bd._cols );
             fflush( stdout );
 
             /* Initialize touring pointers. */
@@ -237,10 +242,11 @@ int main( int argc, char * argv[] ) {
             bds[seen] = bd;                     ++seen;
 
             /* Tour. */
-            tour( bd, bds, &seen, &maxTour );
+            tour( bd, &bds, &seen, &maxTour );
 
-            printf( "THREAD %u: Best solution found visits %d squares (out of %d)\n",
-                    (unsigned int)pthread_self(), maxTour, (bd._cols * bd._rows) );
+            printf( "THREAD %u: Best solution found visits %d square%s (out \
+                    of %d)\n", (unsigned int)pthread_self(), maxTour, 
+                    ( (maxTour > 1) ? "s" : ""), (bd._cols * bd._rows) );
             fflush( stdout );
 
             if ( argc == 4 ) {
