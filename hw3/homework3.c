@@ -5,8 +5,8 @@
  *
  *   bash$ a.out <m> <n> [<k>]
  *
- * where: <m> is the width, number of columns, of the board; <n> is the height, 
- * number of rows, of the board; and the optional <k> is the fewest number of 
+ * where: <m> is the width, number of columns, of the board; <n> is the height,
+ * number of rows, of the board; and the optional <k> is the fewest number of
  * squares allowed on dead end boards printed out.
  */
 
@@ -82,10 +82,10 @@ int arrayMax( int n, int nums[] ) {
 int findPoss( Board bd, Coord moves[] ) {
     int poss = 0;
     for ( int i = 0; i < 8; ++i ) {
-        Coord to = (Coord){ ._x = ( (bd._curr)._x + all[i]._x ), 
+        Coord to = (Coord){ ._x = ( (bd._curr)._x + all[i]._x ),
                             ._y = ( (bd._curr)._y + all[i]._y ) };
-        if ( ( (0 <= to._x) && (to._x < bd._cols) ) && 
-                ( (0 <= to._y) && (to._y < bd._rows) ) && 
+        if ( ( (0 <= to._x) && (to._x < bd._cols) ) &&
+                ( (0 <= to._y) && (to._y < bd._rows) ) &&
                 (bd._grid[to._y][to._x] != VISITED) ) {
             moves[poss] = to;
             ++poss;
@@ -99,7 +99,7 @@ int findPoss( Board bd, Coord moves[] ) {
     return poss;
 }
 
-    
+
 /* Board freeing helper.
  * @param       bdPtr, pointer to Board to free.
  * @modifies    bdPtr
@@ -194,7 +194,7 @@ void * tour( void * ptr ) {
         }
     } else {
         /* poss <= 0 :: dead end */
-        printf( "THREAD %u: Dead end after move #%d\n", 
+        printf( "THREAD %u: Dead end after move #%d\n",
                 (unsigned int)pthread_self(), bd._moves );
         fflush( stdout );
 
@@ -210,7 +210,7 @@ void * tour( void * ptr ) {
 
         /* Exit thread. */
         unsigned int * u_intPtr = calloc( 1, sizeof(unsigned int) );
-        *u_intPtr = pthread_self();
+        *u_intPtr = (unsigned int)pthread_self();
         pthread_exit( u_intPtr );
     }
 
@@ -223,7 +223,7 @@ int main( int argc, char * argv[] ) {
     if ( (argc == 3) || (argc == 4) ) {
         /* Check that 'm' and 'n' are greater than two. */
         char * tmp;
-        int m = strtol( argv[1], &tmp, 10 ), n = strtol( argv[2], &tmp, 10 ), 
+        int m = strtol( argv[1], &tmp, 10 ), n = strtol( argv[2], &tmp, 10 ),
                 k = -1;
         if ( argc == 4 ) {
             k = strtol( argv[3], &tmp, 10 );
@@ -270,7 +270,7 @@ int main( int argc, char * argv[] ) {
 
 #ifdef DEBUG_MODE
             printf( "Board details:\n" );
-            printf( " > _cols = %d, _rows = %d, _moves = %d, _curr = (%d, %d)\n", 
+            printf( " > _cols = %d, _rows = %d, _moves = %d, _curr = (%d, %d)\n",
                     tourBd._cols, tourBd._rows, tourBd._moves, (tourBd._curr)._x,
                     (tourBd._curr)._y );
             fflush( stdout );
@@ -281,52 +281,17 @@ int main( int argc, char * argv[] ) {
 #endif
 
             printf( "THREAD %u: Solving the knight's tour problem for a %dx%d "
-                    "board\n", (unsigned int)pthread_self(), tourBd._rows, 
+                    "board\n", (unsigned int)pthread_self(), tourBd._rows,
                     tourBd._cols );
             fflush( stdout );
 
             /* Tour. */
-            /* Coord moves[8];
-            int poss = findPoss( tourBd, moves );
-            / Determine which path to follow. /
-            if ( poss > 0 ) {
-                if ( poss > 1 ) {
-                    printf( "THREAD %u: %d moves possible after move #%d; "
-                            "creating threads\n", (unsigned int)pthread_self(),
-                            poss, bd._moves );
-
-                    pthread_t tid[poss];
-                    int i = 0, rc = 0;
-
-                    for ( i = 0; i < poss; ++i ) {
-                        Board * bd = calloc( 1, BOARD_SIZE );
-                        *bd = 
-                        rc = pthread_create( &tid[i], NULL, tour,  );
-                    }
-                } else {
-                    / poss == 1 :: don't create new thread /
-                    step( &bd, moves[0] );
-                    tour( bd );
-                }
-            } else {
-                / poss <= 0 :: dead end /
-                printf( "THREAD %u: Dead end after move #%d\n", 
-                        (unsigned int)pthread_self(), bd._moves );
-                fflush( stdout );
-
-                / Add dead end Board to tracker. /
-                if ( (bd._moves >= bd._k) && (bd._k > 0) ) {
-                    ++ended;
-                    endBds = realloc( endBds, (ended * BOARD_SIZE) );
-                    endBds[ (ended - 1) ] = bd;
-                }
-            } */
             Board * bdPtr = calloc( 1, BOARD_SIZE );
             *bdPtr = tourBd;
             tour( bdPtr );
 
             printf( "THREAD %u: Best solution found visits %d square%s (out "
-                    "of %d)\n", (unsigned int)pthread_self(), maxTour, 
+                    "of %d)\n", (unsigned int)pthread_self(), maxTour,
                     ( (maxTour != 1) ? "s" : "" ), (tourBd._cols * tourBd._rows) );
             fflush( stdout );
 
@@ -351,4 +316,3 @@ int main( int argc, char * argv[] ) {
         return EXIT_FAILURE;
     }
 }
-
