@@ -119,7 +119,7 @@ void freeBoard( Board * bdPtr ) {
  */
 void printBoard( Board bd, bool debug ) {
     for ( int i = 0; i < bd._rows; ++i ) {
-        if ( !debug ) { printf( "THREAD %u", (unsigned int)pthread_self() ); }
+        if ( !debug ) { printf( "THREAD %u:", (unsigned int)pthread_self() ); }
         if ( i <= 0 ) { printf( " > %s\n", bd._grid[i] ); }
         else {          printf( "   %s\n", bd._grid[i] ); }
         fflush( stdout );
@@ -176,15 +176,13 @@ void * tour( void * ptr ) {
 
             /* Wait for child threads to complete. */
             for ( i = 0; i < poss; ++i ) {
-                unsigned int * u_intPtr = calloc( 1, sizeof(unsigned int) );
+                unsigned int * u_intPtr;
                 rc = pthread_join( tid[i], (void **)&u_intPtr );
 
                 if ( rc != 0 ) {
                     fprintf( stderr, "ERROR: Could not join thread (%d)\n", rc );
-                } else {
-                    /* rc == 0 :: thread joined */
-                    free( u_intPtr );
                 }
+                free( u_intPtr );
             }
         } else {
             /* poss == 1 :: don't create new thread */
@@ -212,6 +210,7 @@ void * tour( void * ptr ) {
         unsigned int * u_intPtr = calloc( 1, sizeof(unsigned int) );
         *u_intPtr = (unsigned int)pthread_self();
         pthread_exit( u_intPtr );
+        // pthread_detach( pthread_self() );
     }
 
     return NULL;
@@ -301,7 +300,10 @@ int main( int argc, char * argv[] ) {
                 }
             }
 
+            // free( bdPtr );
             free( endBds );
+            freeBoard( &tourBd );
+
             return EXIT_SUCCESS;
         } else {
             /* (m <= 2) || (n <= 2) :: invalid arguments */
