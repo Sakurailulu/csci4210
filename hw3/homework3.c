@@ -17,18 +17,20 @@
 #include <stdlib.h>
 #include <unistd.h>
 
+#define VISITED 'k'
+#define UNVISITED '.'
+
 typedef struct {
     int _x, _y;
 } Coord;
 
-#define COORD_SIZE sizeof( Coord )
-
 typedef struct {
-    int _cols, _rows, _moves;
+    int _cols, _rows, _moves, _k;
     Coord _curr;
     char ** _grid;
 } Board;
 
+#define COORD_SIZE sizeof( Coord )
 #define BOARD_SIZE sizeof( Board )
 
 /* Coord array holding all possible steps. */
@@ -41,14 +43,20 @@ const Coord all[8] = { (Coord){ ._x = +1, ._y = -2 },   /* up, then right */
                        (Coord){ ._x = -2, ._y = -1 },   /* left, then up */
                        (Coord){ ._x = -1, ._y = -2 } }; /* up, then left */
 
+/* Variables shared by all threads. */
+static Board * endBds;
+int maxTour = 0, ended = 0;
+
+pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+
 /* -------------------------------------------------------------------------- */
 
 int arrayMax( int n, int nums[] );
 int findPoss( Board bd, Coord moves[] );
-void freeBoard( Board * bd );
+void freeBoard( Board * bdPtr );
 void printBoard( Board bd, bool debug );
-void step( Board * bd, Coord to );
-void tour( Board bd, Board ** bds, int * seen, int * maxTour );
+Board step( Board bd, Coord to );
+void * tour( void * ptr );
 
 /* -------------------------------------------------------------------------- */
 
@@ -78,7 +86,7 @@ int findPoss( Board bd, Coord moves[] ) {
                             ._y = ( (bd._curr)._y + all[i]._y ) };
         if ( ( (0 <= to._x) && (to._x < bd._cols) ) && 
                 ( (0 <= to._y) && (to._y < bd._rows) ) && 
-                (bd._grid[to._y][to._x] != 'k') ) {
+                (bd._grid[to._y][to._x] != VISITED) ) {
             moves[poss] = to;
             ++poss;
 
@@ -93,15 +101,15 @@ int findPoss( Board bd, Coord moves[] ) {
 
     
 /* Board freeing helper.
- * @param       bd, pointer to Board to free.
- * @modifies    bd
+ * @param       bdPtr, pointer to Board to free.
+ * @modifies    bdPtr
  * @effects     frees all allocated memory in rows and entire board.
  */
-void freeBoard( Board * bd ) {
-    for ( int i = 0; i < (*bd)._rows; ++i ) {
-        free( (*bd)._grid[i] );                 (*bd)._grid[i] = NULL;
+void freeBoard( Board * bdPtr ) {
+    for ( int i = 0; i < (*bdPtr)._rows; ++i ) {
+        free( (*bdPtr)._grid[i] );              (*bdPtr)._grid[i] = NULL;
     }
-    free( (*bd)._grid );                        (*bd)._grid = NULL;
+    free( (*bdPtr)._grid );                     (*bdPtr)._grid = NULL;
 }
 
 
@@ -120,30 +128,25 @@ void printBoard( Board bd, bool debug ) {
 
 
 /* Helper to move knight in Board.
- * @param       bd, pointer to Board in which to step.
+ * @param       bd, Board in which to step.
  *              to, Coord of new move.
- * @modifies    bd
- * @effects     bd._moves, increments by 1.
- *              bd._curr, sets to 'to'.
- *              bd._grid, changes "." to "k" at 'to'.
+ * @return      Board with step taken.
  */
-void step( Board * bd, Coord to ) {
-    ++(*bd)._moves;
-    (*bd)._curr = to;
-    (*bd)._grid[ ((*bd)._curr)._y ][ ((*bd)._curr)._x ] = 'k';
+Board step( Board bd, Coord to ) {
+    ++bd._moves;
+    bd._curr = to;
+    bd._grid[ (bd._curr)._y ][ (bd._curr)._x ] = VISITED;
+    return bd;
 }
 
 
 /* Touring simulation.
- * @param       bd, Board to tour.
- *              bds, pointer to Board pointer to tracker of all Boards made.
- *              seen, int pointer to length tracker for 'bds'.
- *              maxTour, int pointer to maximum found solution.
- * @modifies    seen, bds
- * @effects     increments 'seen' to count of Boards seen.
- *              adds all Boards seen to 'bds'.
+ * @param       ptr, pointer to Board to tour.
  */
-void tour( Board bd, Board ** bds, int * seen, int * maxTour ) {
+void * tour( void * ptr ) {
+    Board bd = *(Board*)ptr;
+    free( ptr );
+
     /* Find possible moves. */
     Coord moves[8];
     int poss = findPoss( bd, moves );
@@ -151,12 +154,43 @@ void tour( Board bd, Board ** bds, int * seen, int * maxTour ) {
     /* Determine which path to follow ( multiple moves, one move, dead end ). */
     if ( poss > 0 ) {
         if ( poss > 1 ) {
-            printf( "THREAD %u: %d moves possible after move #%d; creating \
-                    threads\n", (unsigned int)pthread_self(), poss, bd._moves );
+            printf( "THREAD %u: %d moves possible after move #%d; creating "
+                    "threads\n", (unsigned int)pthread_self(), poss, bd._moves );
+
+            pthread_t tid[poss];
+            int i = 0, rc = 0;
+
+            /* Create child threads. */
+            for ( i = 0; i < poss; ++i ) {
+                Board * bdPtr = calloc( 1, BOARD_SIZE );
+                *bdPtr = step( bd, moves[i] );
+
+                pthread_mutex_lock( &mutex );
+                    rc = pthread_create( &tid[i], NULL, tour, bdPtr );
+                pthread_mutex_unlock( &mutex );
+
+                if ( rc != 0 ) {
+                    fprintf( stderr, "ERROR: Could not create thread (%d)\n", rc );
+                }
+            }
+
+            /* Wait for child threads to complete. */
+            for ( i = 0; i < poss; ++i ) {
+                unsigned int * u_intPtr = calloc( 1, sizeof(unsigned int) );
+                rc = pthread_join( tid[i], (void **)&u_intPtr );
+
+                if ( rc != 0 ) {
+                    fprintf( stderr, "ERROR: Could not join thread (%d)\n", rc );
+                } else {
+                    /* rc == 0 :: thread joined */
+                    free( u_intPtr );
+                }
+            }
         } else {
             /* poss == 1 :: don't create new thread */
-            step( &bd, moves[0] );
-            tour( bd, bds, seen, maxTour );
+            Board * bdPtr = calloc( 1, BOARD_SIZE );
+            *bdPtr = step( bd, moves[0] );
+            tour( bdPtr );
         }
     } else {
         /* poss <= 0 :: dead end */
@@ -165,10 +199,22 @@ void tour( Board bd, Board ** bds, int * seen, int * maxTour ) {
         fflush( stdout );
 
         /* Add dead end Board to tracker. */
-        ++(*seen);
-        *bds = realloc( *bds, ( (*seen + 1) * BOARD_SIZE ) );
-        *bds[*seen] = bd;
+        if ( (bd._moves >= bd._k) && (bd._k > 0) ) {
+            ++ended;
+            endBds = realloc( endBds, (ended * BOARD_SIZE) );
+            endBds[ (ended - 1) ] = bd;
+        }
+
+        /* Update maxTour to current max. */
+        maxTour = ( (bd._moves > maxTour) ? bd._moves : maxTour );
+
+        /* Exit thread. */
+        unsigned int * u_intPtr = calloc( 1, sizeof(unsigned int) );
+        *u_intPtr = pthread_self();
+        pthread_exit( u_intPtr );
     }
+
+    return NULL;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -191,72 +237,106 @@ int main( int argc, char * argv[] ) {
         if ( (m > 2) && (n > 2) ) {
             /* Board initialization. */
             /** Static assignments. **/
-            Board bd = (Board){ ._cols = m, ._rows = n, ._moves = 1, 
-                                ._curr = (Coord){ ._x = 0, ._y = 0 } };
+            Board tourBd = (Board){ ._cols = m, ._rows = n, ._moves = 1, ._k = k,
+                              ._curr = (Coord){ ._x = 0, ._y = 0 } };
 
             /** Dynamic assignments. **/
-            bd._grid = calloc( bd._rows, sizeof(char*) );
-            if ( !bd._grid ) {
+            tourBd._grid = calloc( tourBd._rows, sizeof(char*) );
+            if ( !tourBd._grid ) {
                 fprintf( stderr, "ERROR: Could not allocate memory for board\n" );
                 return EXIT_FAILURE;
             }
 
-            for ( int i = 0; i < bd._rows; ++i ) {
-                bd._grid[i] = calloc( (bd._cols + 1), sizeof(char) );
-                if ( !bd._grid[i] ) {
+            for ( int i = 0; i < tourBd._rows; ++i ) {
+                tourBd._grid[i] = calloc( (tourBd._cols + 1), sizeof(char) );
+                if ( !tourBd._grid[i] ) {
                     fprintf( stderr, ("ERROR: Could not allocate memory for \
                             row %d"), (i + 1) );
                     return EXIT_FAILURE;
                 } else {
-                    /* bd._grid[i] :: allocation successful, fill with markers */
-                    for ( int j = 0; j <= bd._cols; ++j ) {
-                        if ( j < bd._cols ) {
-                            bd._grid[i][j] = '.';
+                    /* bd._grid[i] :: allocation successful, fill markers */
+                    for ( int j = 0; j <= tourBd._cols; ++j ) {
+                        if ( j < tourBd._cols ) {
+                            tourBd._grid[i][j] = UNVISITED;
                         } else {
                             /* j >= bd._cols :: end of string */
-                            bd._grid[i][j] = '\0';
+                            tourBd._grid[i][j] = '\0';
                         }
                     }
                 }
             }
-            bd._grid[ (bd._curr)._y ][ (bd._curr)._x ] = 'k';
+            tourBd._grid[ (tourBd._curr)._y ][ (tourBd._curr)._x ] = VISITED;
+            maxTour = 1;
 
 #ifdef DEBUG_MODE
             printf( "Board details:\n" );
-            printf( "  _cols = %d, _rows = %d, _moves = %d, _curr = (%d, %d)\n", 
-                    bd._cols, bd._rows, bd._moves, (bd._curr)._x, (bd._curr)._y );
+            printf( " > _cols = %d, _rows = %d, _moves = %d, _curr = (%d, %d)\n", 
+                    tourBd._cols, tourBd._rows, tourBd._moves, (tourBd._curr)._x,
+                    (tourBd._curr)._y );
             fflush( stdout );
 
-            printBoard( bd, 1 );
-            printf( '\n' );
+            printBoard( tourBd, 1 );
+            printf( "\n" );
             fflush( stdout );
 #endif
 
-            printf( "THREAD %u: Solving the knight's tour problem for a %dx%d \
-                    board\n", (unsigned int)pthread_self(), bd._rows, bd._cols );
+            printf( "THREAD %u: Solving the knight's tour problem for a %dx%d "
+                    "board\n", (unsigned int)pthread_self(), tourBd._rows, 
+                    tourBd._cols );
             fflush( stdout );
 
-            /* Initialize touring pointers. */
-            int seen = 0, maxTour = 1;
-            Board * bds = calloc( 1, BOARD_SIZE );
-            bds[seen] = bd;                     ++seen;
-
             /* Tour. */
-            tour( bd, &bds, &seen, &maxTour );
+            /* Coord moves[8];
+            int poss = findPoss( tourBd, moves );
+            / Determine which path to follow. /
+            if ( poss > 0 ) {
+                if ( poss > 1 ) {
+                    printf( "THREAD %u: %d moves possible after move #%d; "
+                            "creating threads\n", (unsigned int)pthread_self(),
+                            poss, bd._moves );
 
-            printf( "THREAD %u: Best solution found visits %d square%s (out \
-                    of %d)\n", (unsigned int)pthread_self(), maxTour, 
-                    ( (maxTour > 1) ? "s" : ""), (bd._cols * bd._rows) );
+                    pthread_t tid[poss];
+                    int i = 0, rc = 0;
+
+                    for ( i = 0; i < poss; ++i ) {
+                        Board * bd = calloc( 1, BOARD_SIZE );
+                        *bd = 
+                        rc = pthread_create( &tid[i], NULL, tour,  );
+                    }
+                } else {
+                    / poss == 1 :: don't create new thread /
+                    step( &bd, moves[0] );
+                    tour( bd );
+                }
+            } else {
+                / poss <= 0 :: dead end /
+                printf( "THREAD %u: Dead end after move #%d\n", 
+                        (unsigned int)pthread_self(), bd._moves );
+                fflush( stdout );
+
+                / Add dead end Board to tracker. /
+                if ( (bd._moves >= bd._k) && (bd._k > 0) ) {
+                    ++ended;
+                    endBds = realloc( endBds, (ended * BOARD_SIZE) );
+                    endBds[ (ended - 1) ] = bd;
+                }
+            } */
+            Board * bdPtr = calloc( 1, BOARD_SIZE );
+            *bdPtr = tourBd;
+            tour( bdPtr );
+
+            printf( "THREAD %u: Best solution found visits %d square%s (out "
+                    "of %d)\n", (unsigned int)pthread_self(), maxTour, 
+                    ( (maxTour != 1) ? "s" : "" ), (tourBd._cols * tourBd._rows) );
             fflush( stdout );
 
             if ( argc == 4 ) {
-                for ( int i = 0; i < seen; ++i ) {
-                    if ( bds[i]._moves >= k ) {
-                        printBoard( bds[i], 0 );
-                    }
+                for ( int i = 0; i < ended; ++i ) {
+                    printBoard( endBds[i], 0 );
                 }
             }
 
+            free( endBds );
             return EXIT_SUCCESS;
         } else {
             /* (m <= 2) || (n <= 2) :: invalid arguments */
