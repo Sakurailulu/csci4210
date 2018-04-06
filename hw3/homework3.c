@@ -162,10 +162,10 @@ void * tour( void * ptr ) {
 
             /* Create child threads. */
             for ( i = 0; i < poss; ++i ) {
-                Board * bdPtr = calloc( 1, BOARD_SIZE );
-                *bdPtr = step( bd, moves[i] );
+                Board * bdPtr = malloc( BOARD_SIZE );
 
                 pthread_mutex_lock( &mutex );
+                    *bdPtr = step( bd, moves[i] );
                     rc = pthread_create( &tid[i], NULL, tour, bdPtr );
                 pthread_mutex_unlock( &mutex );
 
@@ -186,7 +186,7 @@ void * tour( void * ptr ) {
             }
         } else {
             /* poss == 1 :: don't create new thread */
-            Board * bdPtr = calloc( 1, BOARD_SIZE );
+            Board * bdPtr = malloc( BOARD_SIZE );
             *bdPtr = step( bd, moves[0] );
             tour( bdPtr );
         }
@@ -197,20 +197,17 @@ void * tour( void * ptr ) {
         fflush( stdout );
 
         /* Add dead end Board to tracker. */
-        if ( (bd._moves >= bd._k) && (bd._k > 0) ) {
-            ++ended;
-            endBds = realloc( endBds, (ended * BOARD_SIZE) );
-            endBds[ (ended - 1) ] = bd;
-        }
+        ++ended;
+        endBds = realloc( endBds, (ended * BOARD_SIZE) );
+        endBds[ (ended - 1) ] = bd;
 
         /* Update maxTour to current max. */
         maxTour = ( (bd._moves > maxTour) ? bd._moves : maxTour );
 
         /* Exit thread. */
-        unsigned int * u_intPtr = calloc( 1, sizeof(unsigned int) );
+        unsigned int * u_intPtr = malloc( sizeof(unsigned int) );
         *u_intPtr = (unsigned int)pthread_self();
         pthread_exit( u_intPtr );
-        // pthread_detach( pthread_self() );
     }
 
     return NULL;
@@ -280,12 +277,12 @@ int main( int argc, char * argv[] ) {
 #endif
 
             printf( "THREAD %u: Solving the knight's tour problem for a %dx%d "
-                    "board\n", (unsigned int)pthread_self(), tourBd._rows,
-                    tourBd._cols );
+                    "board\n", (unsigned int)pthread_self(), tourBd._cols,
+                    tourBd._rows );
             fflush( stdout );
 
             /* Tour. */
-            Board * bdPtr = calloc( 1, BOARD_SIZE );
+            Board * bdPtr = malloc( BOARD_SIZE );
             *bdPtr = tourBd;
             tour( bdPtr );
 
@@ -296,11 +293,17 @@ int main( int argc, char * argv[] ) {
 
             if ( argc == 4 ) {
                 for ( int i = 0; i < ended; ++i ) {
+                    if ( endBds[i]._moves >= k ) {
+                        printBoard( endBds[i], 0 );
+                    }
+                }
+            } else {
+                /* argc != 4 :: print all dead end boards */
+                for ( int i = 0; i < ended; ++i ) {
                     printBoard( endBds[i], 0 );
                 }
             }
 
-            // free( bdPtr );
             free( endBds );
             freeBoard( &tourBd );
 
