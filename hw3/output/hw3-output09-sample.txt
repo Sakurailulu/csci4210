@@ -1,0 +1,63 @@
+THREAD 660690752: Solving the knight's tour problem for a 4x3 board
+THREAD 660690752: 2 moves possible after move #1; creating threads
+THREAD 652359424: 2 moves possible after move #4; creating threads
+THREAD 635574016: 2 moves possible after move #7; creating threads
+THREAD 643966720: 2 moves possible after move #2; creating threads
+THREAD 627181312: 2 moves possible after move #5; creating threads
+THREAD 618788608: Dead end after move #12
+THREAD 335542016: 2 moves possible after move #3; creating threads
+THREAD 318756608: 2 moves possible after move #9; creating threads
+THREAD 310363904: Dead end after move #12
+THREAD 327149312: 2 moves possible after move #4; creating threads
+THREAD 301971200: 2 moves possible after move #7; creating threads
+THREAD 201324288: Dead end after move #10
+THREAD 285185792: 2 moves possible after move #5; creating threads
+THREAD 293578496: Dead end after move #6
+THREAD 192931584: Dead end after move #11
+THREAD 176146176: 2 moves possible after move #5; creating threads
+THREAD 184538880: 2 moves possible after move #7; creating threads
+THREAD 167753472: Dead end after move #9
+THREAD 159360768: Dead end after move #10
+THREAD 3892311808: Dead end after move #10
+THREAD 150968064: 2 moves possible after move #8; creating threads
+THREAD 4018136832: 2 moves possible after move #6; creating threads
+THREAD 4026529536: Dead end after move #10
+THREAD 4009744128: Dead end after move #8
+THREAD 4001351424: Dead end after move #8
+THREAD 3992958720: Dead end after move #9
+THREAD 3984566016: Dead end after move #7
+THREAD 3976173312: Dead end after move #10
+THREAD 3883919104: Dead end after move #8
+THREAD 660690752: Best solution found visits 12 squares (out of 12)
+THREAD 660690752: > kkk
+THREAD 660690752:   kkk
+THREAD 660690752:   kkk
+THREAD 660690752:   kkk
+THREAD 660690752: > kkk
+THREAD 660690752:   kkk
+THREAD 660690752:   kkk
+THREAD 660690752:   kkk
+THREAD 660690752: > kkk
+THREAD 660690752:   kk.
+THREAD 660690752:   kkk
+THREAD 660690752:   k.k
+THREAD 660690752: > k.k
+THREAD 660690752:   kkk
+THREAD 660690752:   kkk
+THREAD 660690752:   kkk
+THREAD 660690752: > kkk
+THREAD 660690752:   kk.
+THREAD 660690752:   kkk
+THREAD 660690752:   k.k
+THREAD 660690752: > kk.
+THREAD 660690752:   kkk
+THREAD 660690752:   k.k
+THREAD 660690752:   kkk
+THREAD 660690752: > kk.
+THREAD 660690752:   kkk
+THREAD 660690752:   k.k
+THREAD 660690752:   kkk
+THREAD 660690752: > k.k
+THREAD 660690752:   kkk
+THREAD 660690752:   kkk
+THREAD 660690752:   k.k

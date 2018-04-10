@@ -1,0 +1,39 @@
+THREAD 509830976: Solving the knight's tour problem for a 4x3 board
+THREAD 509830976: 2 moves possible after move #1; creating threads
+THREAD 501499648: 2 moves possible after move #4; creating threads
+THREAD 493106944: 2 moves possible after move #2; creating threads
+THREAD 484714240: 2 moves possible after move #7; creating threads
+THREAD 402650880: 2 moves possible after move #3; creating threads
+THREAD 385865472: 2 moves possible after move #4; creating threads
+THREAD 394258176: 2 moves possible after move #5; creating threads
+THREAD 369080064: Dead end after move #12
+THREAD 377472768: 2 moves possible after move #5; creating threads
+THREAD 352294656: Dead end after move #6
+THREAD 360687360: Dead end after move #12
+THREAD 4294964992: 2 moves possible after move #5; creating threads
+THREAD 4286572288: 2 moves possible after move #7; creating threads
+THREAD 4160747264: 2 moves possible after move #9; creating threads
+THREAD 4278179584: 2 moves possible after move #7; creating threads
+THREAD 4269786880: 2 moves possible after move #6; creating threads
+THREAD 4261394176: Dead end after move #10
+THREAD 4253001472: Dead end after move #8
+THREAD 4143961856: Dead end after move #9
+THREAD 4244608768: Dead end after move #10
+THREAD 4152354560: Dead end after move #10
+THREAD 4127176448: 2 moves possible after move #8; creating threads
+THREAD 4118783744: Dead end after move #7
+THREAD 4135569152: Dead end after move #10
+THREAD 3758094080: Dead end after move #11
+THREAD 4110391040: Dead end after move #8
+THREAD 3749701376: Dead end after move #8
+THREAD 3741308672: Dead end after move #9
+THREAD 3732915968: Dead end after move #10
+THREAD 509830976: Best solution found visits 12 squares (out of 12)
+THREAD 509830976: > kkk
+THREAD 509830976:   kkk
+THREAD 509830976:   kkk
+THREAD 509830976:   kkk
+THREAD 509830976: > kkk
+THREAD 509830976:   kkk
+THREAD 509830976:   kkk
+THREAD 509830976:   kkk

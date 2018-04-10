@@ -1,0 +1,11 @@
+THREAD 1515497280: Solving the knight's tour problem for a 3x3 board
+THREAD 1515497280: 2 moves possible after move #1; creating threads
+THREAD 1507165952: Dead end after move #8
+THREAD 1498773248: Dead end after move #8
+THREAD 1515497280: Best solution found visits 8 squares (out of 9)
+THREAD 1515497280: > kkk
+THREAD 1515497280:   k.k
+THREAD 1515497280:   kkk
+THREAD 1515497280: > kkk
+THREAD 1515497280:   k.k
+THREAD 1515497280:   kkk

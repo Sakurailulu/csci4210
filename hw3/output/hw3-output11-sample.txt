@@ -1,0 +1,91 @@
+THREAD 1723860800: Solving the knight's tour problem for a 4x3 board
+THREAD 1723860800: 2 moves possible after move #1; creating threads
+THREAD 1715533568: 2 moves possible after move #4; creating threads
+THREAD 1707140864: 2 moves possible after move #2; creating threads
+THREAD 1698748160: 2 moves possible after move #7; creating threads
+THREAD 1690355456: 2 moves possible after move #3; creating threads
+THREAD 1610610432: 2 moves possible after move #5; creating threads
+THREAD 1602217728: 2 moves possible after move #4; creating threads
+THREAD 1593825024: 2 moves possible after move #9; creating threads
+THREAD 1577039616: Dead end after move #12
+THREAD 1585432320: 2 moves possible after move #5; creating threads
+THREAD 1560254208: Dead end after move #12
+THREAD 1568646912: 2 moves possible after move #7; creating threads
+THREAD 1266673408: Dead end after move #6
+THREAD 1258280704: Dead end after move #10
+THREAD 1275066112: 2 moves possible after move #7; creating threads
+THREAD 1233102592: Dead end after move #11
+THREAD 1241495296: 2 moves possible after move #6; creating threads
+THREAD 1249888000: 2 moves possible after move #5; creating threads
+THREAD 1224709888: Dead end after move #8
+THREAD 998237952: Dead end after move #7
+THREAD 1006630656: 2 moves possible after move #8; creating threads
+THREAD 981452544: Dead end after move #8
+THREAD 989845248: Dead end after move #9
+THREAD 964667136: Dead end after move #10
+THREAD 956274432: Dead end after move #10
+THREAD 973059840: Dead end after move #8
+THREAD 864020224: Dead end after move #10
+THREAD 872412928: Dead end after move #9
+THREAD 1224709888: Dead end after move #10
+THREAD 1723860800: Best solution found visits 12 squares (out of 12)
+THREAD 1723860800: > kkk
+THREAD 1723860800:   kkk
+THREAD 1723860800:   kkk
+THREAD 1723860800:   kkk
+THREAD 1723860800: > kkk
+THREAD 1723860800:   kkk
+THREAD 1723860800:   kkk
+THREAD 1723860800:   kkk
+THREAD 1723860800: > k.k
+THREAD 1723860800:   k.k
+THREAD 1723860800:   .k.
+THREAD 1723860800:   .k.
+THREAD 1723860800: > kkk
+THREAD 1723860800:   kk.
+THREAD 1723860800:   kkk
+THREAD 1723860800:   k.k
+THREAD 1723860800: > k.k
+THREAD 1723860800:   kkk
+THREAD 1723860800:   kkk
+THREAD 1723860800:   kkk
+THREAD 1723860800: > kk.
+THREAD 1723860800:   .kk
+THREAD 1723860800:   k.k
+THREAD 1723860800:   k.k
+THREAD 1723860800: > kk.
+THREAD 1723860800:   k.k
+THREAD 1723860800:   k.k
+THREAD 1723860800:   .k.
+THREAD 1723860800: > kkk
+THREAD 1723860800:   k.k
+THREAD 1723860800:   kkk
+THREAD 1723860800:   ...
+THREAD 1723860800: > kkk
+THREAD 1723860800:   k.k
+THREAD 1723860800:   kkk
+THREAD 1723860800:   .k.
+THREAD 1723860800: > kk.
+THREAD 1723860800:   kkk
+THREAD 1723860800:   k.k
+THREAD 1723860800:   kkk
+THREAD 1723860800: > kkk
+THREAD 1723860800:   kk.
+THREAD 1723860800:   kkk
+THREAD 1723860800:   k.k
+THREAD 1723860800: > kk.
+THREAD 1723860800:   .kk
+THREAD 1723860800:   k.k
+THREAD 1723860800:   k.k
+THREAD 1723860800: > kk.
+THREAD 1723860800:   kkk
+THREAD 1723860800:   k.k
+THREAD 1723860800:   kkk
+THREAD 1723860800: > k..
+THREAD 1723860800:   kkk
+THREAD 1723860800:   k.k
+THREAD 1723860800:   kkk
+THREAD 1723860800: > k.k
+THREAD 1723860800:   kkk
+THREAD 1723860800:   kkk
+THREAD 1723860800:   k.k

@@ -1,0 +1,5 @@
+THREAD 4192241472: Solving the knight's tour problem for a 3x3 board
+THREAD 4192241472: 2 moves possible after move #1; creating threads
+THREAD 4183910144: Dead end after move #8
+THREAD 4175517440: Dead end after move #8
+THREAD 4192241472: Best solution found visits 8 squares (out of 9)
