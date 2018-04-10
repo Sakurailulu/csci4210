@@ -164,10 +164,11 @@ void * tour( void * ptr ) {
             for ( i = 0; i < poss; ++i ) {
                 Board * bdPtr = malloc( BOARD_SIZE );
 
-                pthread_mutex_lock( &mutex );
+                // pthread_mutex_lock( &mutex );
                     *bdPtr = step( bd, moves[i] );
-                    rc = pthread_create( &tid[i], NULL, tour, bdPtr );
-                pthread_mutex_unlock( &mutex );
+                // pthread_mutex_unlock( &mutex );
+
+                rc = pthread_create( &tid[i], NULL, tour, bdPtr );
 
                 if ( rc != 0 ) {
                     fprintf( stderr, "ERROR: Could not create thread (%d)\n", rc );
@@ -197,12 +198,14 @@ void * tour( void * ptr ) {
         fflush( stdout );
 
         /* Add dead end Board to tracker. */
-        ++ended;
-        endBds = realloc( endBds, (ended * BOARD_SIZE) );
-        endBds[ (ended - 1) ] = bd;
+        pthread_mutex_lock( &mutex );
+            ++ended;
+            endBds = realloc( endBds, (ended * BOARD_SIZE) );
+            endBds[ (ended - 1) ] = bd;
 
-        /* Update maxTour to current max. */
-        maxTour = ( (bd._moves > maxTour) ? bd._moves : maxTour );
+            /* Update maxTour to current max. */
+            maxTour = ( (bd._moves > maxTour) ? bd._moves : maxTour );
+        pthread_mutex_unlock( &mutex );
 
         /* Exit thread. */
         unsigned int * u_intPtr = malloc( sizeof(unsigned int) );
