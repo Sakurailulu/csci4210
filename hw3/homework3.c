@@ -173,12 +173,8 @@ void * tour( void * ptr ) {
                     (*bdPtr)._grid[j] = strdup( bd._grid[j] );
                 }
 
-                // pthread_mutex_lock( &mutex );
-                    *bdPtr = step( *bdPtr, moves[i] );
-                // pthread_mutex_unlock( &mutex );
-
+                *bdPtr = step( *bdPtr, moves[i] );
                 rc = pthread_create( &tid[i], NULL, tour, bdPtr );
-
                 if ( rc != 0 ) {
                     fprintf( stderr, "ERROR: Could not create thread (%d)\n", rc );
                 }
@@ -245,7 +241,7 @@ int main( int argc, char * argv[] ) {
         if ( (m > 2) && (n > 2) ) {
             /* Board initialization. */
             /** Static assignments. **/
-            Board tourBd = (Board){ ._cols = m, ._rows = n, ._moves = 1, ._k = k,
+            Board tourBd = (Board){ ._cols = n, ._rows = m, ._moves = 1, ._k = k,
                               ._curr = (Coord){ ._x = 0, ._y = 0 } };
 
             /** Dynamic assignments. **/
@@ -289,8 +285,8 @@ int main( int argc, char * argv[] ) {
 #endif
 
             printf( "THREAD %u: Solving the knight's tour problem for a %dx%d "
-                    "board\n", (unsigned int)pthread_self(), tourBd._cols,
-                    tourBd._rows );
+                    "board\n", (unsigned int)pthread_self(), tourBd._rows,
+                    tourBd._cols );
             fflush( stdout );
 
             /* Tour. */
