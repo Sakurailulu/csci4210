@@ -1,11 +1,12 @@
 /* homework3.c
  * Griffin Melnick, melnig@rpi.edu
  *
- * Program info
+ * This program simulates a solution to the knight's tour problem using 
+ * multithreading via the 'pthread' library. The program is called using
  *
  *   bash$ a.out <m> <n> [<k>]
  *
- * where: <m> is the width, number of columns, of the board; <n> is the height,
+ * where <m> is the width, number of columns, of the board; <n> is the height,
  * number of rows, of the board; and the optional <k> is the fewest number of
  * squares allowed on dead end boards printed out.
  */
@@ -15,6 +16,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 
 #define VISITED 'k'
@@ -163,9 +165,16 @@ void * tour( void * ptr ) {
             /* Create child threads. */
             for ( i = 0; i < poss; ++i ) {
                 Board * bdPtr = malloc( BOARD_SIZE );
+                (*bdPtr) = (Board){ ._cols = bd._cols, ._rows = bd._rows, 
+                                    ._moves = bd._moves, ._k = bd._k, 
+                                    ._curr = bd._curr };
+                (*bdPtr)._grid = calloc( (*bdPtr)._rows, sizeof( char* ) );
+                for ( int j = 0; j < (*bdPtr)._rows; ++j ) {
+                    (*bdPtr)._grid[j] = strdup( bd._grid[j] );
+                }
 
                 // pthread_mutex_lock( &mutex );
-                    *bdPtr = step( bd, moves[i] );
+                    *bdPtr = step( *bdPtr, moves[i] );
                 // pthread_mutex_unlock( &mutex );
 
                 rc = pthread_create( &tid[i], NULL, tour, bdPtr );
@@ -197,8 +206,8 @@ void * tour( void * ptr ) {
                 (unsigned int)pthread_self(), bd._moves );
         fflush( stdout );
 
-        /* Add dead end Board to tracker. */
         pthread_mutex_lock( &mutex );
+            /* Add dead end Board to tracker. */
             ++ended;
             endBds = realloc( endBds, (ended * BOARD_SIZE) );
             endBds[ (ended - 1) ] = bd;
