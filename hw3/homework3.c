@@ -147,7 +147,7 @@ Board step( Board bd, Coord to ) {
  */
 void * tour( void * ptr ) {
     Board bd = *(Board*)ptr;
-    free( ptr );
+    free( ptr );                                ptr = NULL;
 
     /* Find possible moves. */
     Coord moves[8];
@@ -159,7 +159,8 @@ void * tour( void * ptr ) {
             printf( "THREAD %u: %d moves possible after move #%d; creating "
                     "threads\n", (unsigned int)pthread_self(), poss, bd._moves );
 
-            pthread_t tid[poss];
+            // Board bds[poss];
+            pthread_t tids[poss];
             int i = 0, rc = 0;
 
             /* Create child threads. */
@@ -174,7 +175,7 @@ void * tour( void * ptr ) {
                 }
 
                 *bdPtr = step( *bdPtr, moves[i] );
-                rc = pthread_create( &tid[i], NULL, tour, bdPtr );
+                rc = pthread_create( &tids[i], NULL, tour, bdPtr );
                 if ( rc != 0 ) {
                     fprintf( stderr, "ERROR: Could not create thread (%d)\n", rc );
                 }
@@ -183,12 +184,12 @@ void * tour( void * ptr ) {
             /* Wait for child threads to complete. */
             for ( i = 0; i < poss; ++i ) {
                 unsigned int * u_intPtr;
-                rc = pthread_join( tid[i], (void **)&u_intPtr );
+                rc = pthread_join( tids[i], (void **)&u_intPtr );
 
                 if ( rc != 0 ) {
                     fprintf( stderr, "ERROR: Could not join thread (%d)\n", rc );
                 }
-                free( u_intPtr );
+                free( u_intPtr );               u_intPtr = NULL;
             }
         } else {
             /* poss == 1 :: don't create new thread */
@@ -303,16 +304,18 @@ int main( int argc, char * argv[] ) {
                 for ( int i = 0; i < ended; ++i ) {
                     if ( endBds[i]._moves >= k ) {
                         printBoard( endBds[i], 0 );
+                        freeBoard( &endBds[i] );
                     }
                 }
             } else {
                 /* argc != 4 :: print all dead end boards */
                 for ( int i = 0; i < ended; ++i ) {
                     printBoard( endBds[i], 0 );
+                    freeBoard( &endBds[i] );
                 }
             }
 
-            free( endBds );
+            free( endBds );                     endBds = NULL;
             freeBoard( &tourBd );
 
             return EXIT_SUCCESS;
