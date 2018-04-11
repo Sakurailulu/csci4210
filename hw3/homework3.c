@@ -53,7 +53,6 @@ pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 
 /* -------------------------------------------------------------------------- */
 
-int arrayMax( int n, int nums[] );
 int findPoss( Board bd, Coord moves[] );
 void freeBoard( Board * bdPtr );
 void printBoard( Board bd, bool debug );
@@ -61,20 +60,6 @@ Board step( Board bd, Coord to );
 void * tour( void * ptr );
 
 /* -------------------------------------------------------------------------- */
-
-/* Helper to find max value in array.
- * @param       n, length of array.
- *              nums, array of which to find max.
- * @return      max value of array.
- */
-int arrayMax( int n, int nums[] ) {
-    int max = INT_MIN;
-    for ( int i = 0; i < n; ++i ) {
-        max = ( (nums[i] > max) ? nums[i] : max );
-    }
-    return max;
-}
-
 
 /* Helper to find all possible moves from current position.
  * @param       bd, Board in which to find possible moves.
