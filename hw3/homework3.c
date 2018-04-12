@@ -143,8 +143,8 @@ void * tour( void * ptr ) {
         if ( poss > 1 ) {
             printf( "THREAD %u: %d moves possible after move #%d; creating "
                     "threads\n", (unsigned int)pthread_self(), poss, bd._moves );
+            fflush( stdout );
 
-            // Board bds[poss];
             pthread_t tids[poss];
             int i = 0, rc = 0;
 
@@ -213,8 +213,8 @@ int main( int argc, char * argv[] ) {
     if ( (argc == 3) || (argc == 4) ) {
         /* Check that 'm' and 'n' are greater than two. */
         char * tmp;
-        int m = strtol( argv[1], &tmp, 10 ), n = strtol( argv[2], &tmp, 10 ),
-                k = -1;
+        const int m = strtol( argv[1], &tmp, 10 ), n = strtol( argv[2], &tmp, 10 );
+        int k = -1;
         if ( argc == 4 ) {
             k = strtol( argv[3], &tmp, 10 );
             if ( (k <= 0) || ( k > (m * n) ) ) {
@@ -228,7 +228,7 @@ int main( int argc, char * argv[] ) {
             /* Board initialization. */
             /** Static assignments. **/
             Board tourBd = (Board){ ._cols = n, ._rows = m, ._moves = 1, ._k = k,
-                              ._curr = (Coord){ ._x = 0, ._y = 0 } };
+                                    ._curr = (Coord){ ._x = 0, ._y = 0 } };
 
             /** Dynamic assignments. **/
             tourBd._grid = calloc( tourBd._rows, sizeof(char*) );
@@ -240,24 +240,22 @@ int main( int argc, char * argv[] ) {
             for ( int i = 0; i < tourBd._rows; ++i ) {
                 tourBd._grid[i] = calloc( (tourBd._cols + 1), sizeof(char) );
                 if ( !tourBd._grid[i] ) {
-                    fprintf( stderr, ("ERROR: Could not allocate memory for \
-                            row %d"), (i + 1) );
+                    fprintf( stderr, ("ERROR: Could not allocate memory for "
+                            "row %d\n"), (i + 1) );
                     return EXIT_FAILURE;
                 } else {
-                    /* bd._grid[i] :: allocation successful, fill markers */
+                    /* tourBd._grid[i] :: allocation successful, fill markers */
                     for ( int j = 0; j <= tourBd._cols; ++j ) {
                         if ( j < tourBd._cols ) {
                             tourBd._grid[i][j] = UNVISITED;
                         } else {
-                            /* j >= bd._cols :: end of string */
+                            /* j == bd._cols :: end of string */
                             tourBd._grid[i][j] = '\0';
                         }
                     }
                 }
             }
             tourBd._grid[ (tourBd._curr)._y ][ (tourBd._curr)._x ] = VISITED;
-            maxTour = 1;
-
 #ifdef DEBUG_MODE
             printf( "Board details:\n" );
             printf( " > _cols = %d, _rows = %d, _moves = %d, _curr = (%d, %d)\n",
@@ -270,6 +268,7 @@ int main( int argc, char * argv[] ) {
             fflush( stdout );
 #endif
 
+            maxTour = 1;
             printf( "THREAD %u: Solving the knight's tour problem for a %dx%d "
                     "board\n", (unsigned int)pthread_self(), tourBd._rows,
                     tourBd._cols );
@@ -282,7 +281,7 @@ int main( int argc, char * argv[] ) {
 
             printf( "THREAD %u: Best solution found visits %d square%s (out "
                     "of %d)\n", (unsigned int)pthread_self(), maxTour,
-                    ( (maxTour != 1) ? "s" : "" ), (tourBd._cols * tourBd._rows) );
+                    ( (maxTour != 1) ? "s" : "" ), (tourBd._rows * tourBd._cols) );
             fflush( stdout );
 
             if ( argc == 4 ) {
@@ -308,12 +307,12 @@ int main( int argc, char * argv[] ) {
             /* (m <= 2) || (n <= 2) :: invalid arguments */
             fprintf( stderr, "ERROR: Invalid argument(s)\n" );
             fprintf( stderr, "USAGE: a.out <m> <n> [<k>]\n" );
-            return EXIT_FAILURE;
         }
     } else {
         /* (argc != 3) && (argc != 4) :: incorrect number of arguments */
         fprintf( stderr, "ERROR: Invalid argument(s)\n" );
         fprintf( stderr, "USAGE: a.out <m> <n> [<k>]\n" );
-        return EXIT_FAILURE;
     }
+
+    return EXIT_FAILURE;
 }
