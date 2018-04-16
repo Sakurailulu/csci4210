@@ -211,7 +211,7 @@ void tour( Board bd, int * maxTourPtr, int r, int w ) {
         printBoard( bd, 0 );
 #endif
 
-        // close( r );                             r = -1;
+        close( r );                             r = -1;
         int out = write( w, &bd._moves, sizeof(int) );
         if ( out < 0 ) {
             fprintf( stderr, "ERROR: write() caused tour to fail\n" );
