@@ -7,6 +7,21 @@
 #include <stdlib.h>
 #include <unistd.h>
 
+/* Macro defintions for length of user ids and messages. */
+#define MIN_ID 3
+#define MAX_ID 20
+#define MAX_MSG 994
+
+/* Method declarations. ----------------------------------------------------- */
+
+
+
+/* Method definitions. ------------------------------------------------------ */
+
+
+
+/* Main. -------------------------------------------------------------------- */
+
 int main( int argc, char * argv[] ) {
     if ( argc == 3 ) {
         /* ... */
