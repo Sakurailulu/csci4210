@@ -114,37 +114,6 @@ class Simulator:
     ''' Class methods. ----------------------------------------------------- '''
 
     """
-    Helper method to added new Processes for contiguous simulations.
-    :param:     proc, Process to add
-                next, boolean if running c_next()
-                best, boolean if running c_best()
-                worst, boolean if running c_worst()
-    :return:    True if added, False otherwise
-    """
-    def add( self, proc, next=False, best=False, worst=False ):
-        if next:
-            added = False
-            for block in [ b for b in self._memory if ( (not b._tag) and
-                    (len(b._mem) >= proc[0]._size) ) ]:
-                i = (self._memory).index( block )
-                tmp = len(block._mem) - proc[0]._size
-
-                ''' Changed stored memory. '''
-                self._memory[i] = Block( True, (proc[0]._pid * proc[0]._size) )
-                (self._memory).insert( (i + 1), Block( False, (FREE * tmp) ) )
-
-                ''' Manage in _running. '''
-                self._running[ proc[0] ] = proc[1][1]
-
-                added = True
-                print( "time {}ms: Placed process {}:\n{}".format(self._tick,
-                        proc[0]._pid, self) )
-                break
-
-            return added
-
-
-    """
     Helper method to check new Processes for arrival.
     :return:    sorted list with tuples of new Processes and respective times
     """
@@ -155,6 +124,38 @@ class Simulator:
             tmp.append( ( proc, (proc._times).popleft() ) )
 
         return sorted( tmp, key = lambda obj : obj[0]._pid )
+
+
+    """
+    Helper method to added new Processes for contiguous simulations.
+    :param:     proc, Process to add
+                next, boolean if running c_next()
+                best, boolean if running c_best()
+                worst, boolean if running c_worst()
+    :return:    True if added, False otherwise
+    """
+    def c_add( self, proc, next=False, best=False, worst=False ):
+        added = False
+        for block in sorted( [ b for b in self._memory if ( (not b._tag) and
+                (len(b._mem) >= proc[0]._size) ) ], key=lambda l : (
+                len(l._mem) if (not next) else (not len(l._mem)) ),
+                reverse=worst ):
+            i = (self._memory).index( block )
+            tmp = len(block._mem) - proc[0]._size
+
+            ''' Changed stored memory. '''
+            self._memory[i] = Block( True, (proc[0]._pid * proc[0]._size) )
+            (self._memory).insert( (i + 1), Block( False, (FREE * tmp) ) )
+
+            ''' Manage in _running. '''
+            self._running[ proc[0] ] = proc[1][1]
+
+            added = True
+            print( "time {}ms: Placed process {}:\n{}".format(self._tick,
+                    proc[0]._pid, self) )
+            break
+
+        return added
 
 
     """
@@ -192,6 +193,19 @@ class Simulator:
 
             ''' Remove from running. '''
             del self._running[proc]
+
+
+    """
+    Helper method to increment time.
+    :modifies:  _running, _tick
+    :effects:   (to _running) decrements all remaining time (values)
+                (to _tick) increments
+    """
+    def tick( self ):
+        for proc, rem in (self._running).items():
+            self._running[proc] = rem - 1
+
+        self._tick += 1
 
 
     ''' Overridden methods. ------------------------------------------------ '''
@@ -240,28 +254,24 @@ def c_next( procs ):
             print( "time {}ms: Process {} arrived (requires {} frames)".format(
                     sim._tick, proc[0]._pid, proc[0]._size) )
 
-            added = sim.add( proc, True, False, False )
+            added = sim.c_add( proc, True, False, False )
             if ( added ):
                 continue
 
             elif ( (not added) and ( sum( len(b._mem) for b in sim._memory if
                     (not b._tag) ) >= proc[0]._size ) ):
                 sim.defrag()
-                added = sim.add( proc, True, False, False )
+                added = sim.c_add( proc, True, False, False )
 
                 if ( added ):
                     continue
 
-                else:
-                    ''' not added : skip process '''
-                    print ( "time {}ms: Cannot place process {} -- "
-                            "skipped!".format(sim._tick, proc[0]._pid) )
+            ''' not added : skip process '''
+            print ( "time {}ms: Cannot place process {} -- "
+                    "skipped!".format(sim._tick, proc[0]._pid) )
 
         ''' Decrement all run times and tick. '''
-        for proc, rem in (sim._running).items():
-            rem -= 1
-
-        sim._tick += 1
+        sim.tick()
 
     print( "time {}ms: Simulator ended (Contiguous -- Next-fit)\n".format(
             sim._tick) )
