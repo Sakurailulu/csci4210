@@ -106,6 +106,7 @@ class Simulator:
     """
     def __init__( self, procs ):
         self._procs = copy.deepcopy( procs )
+        self._curr = 0
         self._memory = [ Block() ]
         self._running = ddict( int )
         self._tick = 0
@@ -136,7 +137,9 @@ class Simulator:
     """
     def c_add( self, proc, next=False, best=False, worst=False ):
         added = False
-        for block in sorted( [ b for b in self._memory if ( (not b._tag) and
+        tmp = [ self._memory[(i % len(self._memory))] for i in range( self._curr
+                + len(self._memory) ) ]
+        for block in sorted( [ b for b in tmp if ( (not b._tag) and
                 (len(b._mem) >= proc[0]._size) ) ], key=lambda l : (
                 len(l._mem) if (not next) else (not len(l._mem)) ),
                 reverse=worst ):
@@ -153,6 +156,7 @@ class Simulator:
             added = True
             print( "time {}ms: Placed process {}:\n{}".format(self._tick,
                     proc[0]._pid, self) )
+            # self._curr = (self._memory).index( block )
             break
 
         return added
@@ -168,11 +172,12 @@ class Simulator:
                 b in self._memory if (not b._tag) ] )
 
         ''' maybe add check for process arrival '''
-        tmp = sum( len( b._mem for b in self._memory if (b._tag) ) )
+        tmp = sum( len(b._mem) for b in self._memory if (b._tag) )
         self._tick += tmp * T_MEMMOVE
         print( "time {}ms: Defragmentation complete (moved {} frames: "
-                "{})".format( self._tick, tmp, "".join(b._mem[0] for b in
+                "{})".format( self._tick, tmp, ", ".join(b._mem[0] for b in
                 self._memory if (b._tag)) ) )
+        self._curr = len(self._memory) - 1
 
 
     """
@@ -286,7 +291,38 @@ def c_best( procs ):
     print( "time {}ms: Simulator started (Contiguous -- Best-fit)".format(
             sim._tick) )
 
-    ''' simulation code '''
+    while 1:
+        ''' Remove done processes. '''
+        sim.remove()
+
+        ''' Check for simulation completion. '''
+        arrived = sim.arrived()
+        if ( (not arrived) and (not sim._running) ):
+            break
+
+        ''' Added new processes. '''
+        for proc in arrived:
+            print( "time {}ms: Process {} arrived (requires {} frames)".format(
+                    sim._tick, proc[0]._pid, proc[0]._size) )
+
+            added = sim.c_add( proc, False, True, False )
+            if ( added ):
+                continue
+
+            elif ( (not added) and ( sum( len(b._mem) for b in sim._memory if
+                    (not b._tag) ) >= proc[0]._size ) ):
+                sim.defrag()
+                added = sim.c_add( proc, False, True, False )
+
+                if ( added ):
+                    continue
+
+            ''' not added : skip process '''
+            print ( "time {}ms: Cannot place process {} -- "
+                    "skipped!".format(sim._tick, proc[0]._pid) )
+
+        ''' Decrement all run times and tick. '''
+        sim.tick()
 
     print( "time {}ms: Simulator ended (Contiguous -- Best-fit)\n".format(
             sim._tick) )
@@ -301,7 +337,38 @@ def c_worst( procs ):
     print( "time {}ms: Simulator started (Contiguous -- Worst-fit)".format(
             sim._tick) )
 
-    ''' simulation code '''
+    while 1:
+        ''' Remove done processes. '''
+        sim.remove()
+
+        ''' Check for simulation completion. '''
+        arrived = sim.arrived()
+        if ( (not arrived) and (not sim._running) ):
+            break
+
+        ''' Added new processes. '''
+        for proc in arrived:
+            print( "time {}ms: Process {} arrived (requires {} frames)".format(
+                    sim._tick, proc[0]._pid, proc[0]._size) )
+
+            added = sim.c_add( proc, False, False, True )
+            if ( added ):
+                continue
+
+            elif ( (not added) and ( sum( len(b._mem) for b in sim._memory if
+                    (not b._tag) ) >= proc[0]._size ) ):
+                sim.defrag()
+                added = sim.c_add( proc, False, False, True )
+
+                if ( added ):
+                    continue
+
+            ''' not added : skip process '''
+            print ( "time {}ms: Cannot place process {} -- "
+                    "skipped!".format(sim._tick, proc[0]._pid) )
+
+        ''' Decrement all run times and tick. '''
+        sim.tick()
 
     print( "time {}ms: Simulator ended (Contiguous -- Worst-fit)\n".format(
             sim._tick) )
@@ -352,4 +419,3 @@ if ( __name__ == "__main__" ):
     else:
         ''' len(sys.argv) != 2 '''
         sys.exit( "ERROR: Invalid argument(s)\nUSAGE: ./a.out <input-file>" )
-
