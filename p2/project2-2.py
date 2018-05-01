@@ -16,11 +16,10 @@ algorithms and a non-contiguous algorithm. Run by calling
 where <input-file> is a text file with properly formatted process details.
 """
 
-from collections import defaultdict as ddict
-from collections import deque
-import copy
-import itertools
-import sys
+from collections import defaultdict as ddict, deque, OrderedDict as odict
+from copy import deepcopy
+from itertools import groupby
+from sys import argv, exit
 
 FRAMES = 256
 FREE = '.'
@@ -32,44 +31,16 @@ T_MEMMOVE = 1
 
 class Process:
 
-    ''' Constructors. ------------------------------------------------------ '''
-
     """
-    Default constructor.
+    Constructor.
     :param:     pid, Process ID value
                 size, amount of space taken in memory
                 time, deque of arrival and run times
     """
     def __init__( self, pid, size, times ):
-        self._pid = copy.deepcopy( pid )
-        self._size = copy.deepcopy( size )
-        self._times = copy.deepcopy( times )
-
-
-    ''' Accessors. --------------------------------------------------------- '''
-
-    """
-    Accessor to find current ticker values.
-    :return:    _pid
-    """
-    def get_pid( self ):
-        return self._pid
-
-
-    """
-    Accessor to find current ticker values.
-    :return:    _size
-    """
-    def get_size( self ):
-        return self._size
-
-
-    """
-    Accessor to find current ticker values.
-    :return:    _times
-    """
-    def get_tick( self ):
-        return self._times
+        self._pid = deepcopy( pid )
+        self._size = deepcopy( size )
+        self._times = deepcopy( times )
 
 
     ''' Overidden methods. ------------------------------------------------- '''
@@ -95,14 +66,12 @@ class Process:
 
 class Simulator:
 
-    ''' Constructors. ------------------------------------------------------ '''
-
     """
-    Default constructor.
+    Constructor.
     :param:     procs, deep-copied list of Processes in simulator
     """
     def __init__( self, procs ):
-        self._procs = copy.deepcopy( procs )
+        self._procs = deepcopy( procs )
 
         ''' Non-variable initializing values. '''
         self._last = 0
@@ -126,46 +95,6 @@ class Simulator:
         return sorted( tmp, key = lambda obj : obj[0]._pid )
 
 
-    """
-    Accessor to find current ticker values.
-    :return:    _procs
-    """
-    def get_procs( self ):
-        return self._procs
-
-
-    """
-    Accessor to find current ticker values.
-    :return:    _last
-    """
-    def get_last( self ):
-        return self._last
-
-
-    """
-    Accessor to find current ticker values.
-    :return:    _mem
-    """
-    def get_mem( self ):
-        return self._mem
-
-
-    """
-    Accessor to find current ticker values.
-    :return:    _remain
-    """
-    def get_remain( self ):
-        return self._remain
-
-
-    """
-    Accessor to find current ticker values.
-    :return:    _tick
-    """
-    def get_tick( self ):
-        return self._tick
-
-
     ''' Modifiers. --------------------------------------------------------- '''
 
     """
@@ -176,41 +105,33 @@ class Simulator:
                 (to _last) sets to just past the end of Process
     """
     def c_add( self, proc, next=False, best=False, worst=False ):
+        p, rem = proc[0], proc[1]
         if ( next ):
-            tmp = [ "".join(g) for k, g in itertools.groupby( "".join(l for l in
-                    self._mem[self._last : FRAMES]) ) ] + [ "".join(g) for k, g
-                    in itertools.groupby( "".join(l for l in self._mem[0 :
-                    self._last]) ) ]
+            tmp = [ "".join(g) for k, g in groupby("".join(l for l in
+                    self._mem[self._last : FRAMES])) ] + [ "".join(g) for k, g
+                    in groupby("".join(l for l in self._mem[0 : self._last])) ]
 
         else:
-            tmp = [ "".join(g) for k, g in itertools.groupby( "".join(l for l in
+            tmp = [ "".join(g) for k, g in groupby( "".join(l for l in
                     self._mem) ) ]
 
         added = False
-        for block in sorted( [ list(b) for b in tmp if ( (FREE in b) and (len(b) >=
-                proc[0]._size) ) ], key=lambda l : (len(l) if (not next)
-                else (not len(l)) ), reverse=worst ):
-            i = tmp.index( "".join(l for l in block) )
-            block[0 : proc[0]._size] = list( str(proc[0]) )
-            tmp[i] = "".join(l for l in block)
+        for block in sorted( [ b for b in tmp if ( (FREE in b) and (len(b) >=
+                p._size) ) ], key=lambda l : (len(l) if (not next) else (not
+                len(l)) ), reverse=worst ):
+            tmp[ tmp.index(block) ] = "{}{}".format( str(p), ( FREE * (len(block) - p._size) ) )
 
-            self._mem = []
-            # self._mem = [ [l for l in b] for b in tmp ]
-            for b in tmp:
-                for l in b:
-                    (self._mem).append( l )
-            if ( next ):
-                self._mem = self._mem[(FRAMES - self._last) : FRAMES] + \
-                        self._mem[0 : (FRAMES - self._last)]
-
-            self._remain[ proc[0] ] = proc[1]
+            self._mem = ( list( "".join(tmp) ) if (not next) else (list(
+                    "".join(tmp) )[(FRAMES - self._last) : FRAMES] + list(
+                    "".join(tmp) )[0 : (FRAMES - self._last)]) )
+            self._remain[ p ] = rem
             self._last = max([ i for i, l in enumerate(self._mem) if (l ==
-                    proc[0]._pid) ]) + 1
+                    p._pid) ]) + 1
 
             print( "time {}ms: Placed process {}:\n{}".format(self._tick,
-                    proc[0]._pid, self) )
+                    p._pid, self) )
 
-            added = ( (self._mem).count(proc[0]._pid) == proc[0]._size )
+            added = ( (self._mem).count(p._pid) == p._size )
             break
 
         return added
@@ -224,56 +145,27 @@ class Simulator:
                 (to _last) sets to first occurence of FREE
     """
     def defrag( self ):
-        tmp_mem = [ "".join(g) for k, g in itertools.groupby( "".join(l for l in
-                self._mem), key=lambda obj : (obj != FREE) ) ]
-        #tmp_moved = sum([ len(b) for b in tmp_mem if (FREE not in b) ]) if (FREE in tmp_mem[0]) else sum([ len(b) for b in tmp_mem[1 :] if (FREE not in b) ])
+        mem = [ "".join(g) for k, g in groupby( "".join(l for l in self._mem),
+                key=lambda obj : (obj != FREE) ) ]
+        tmp = sum( [len(b) for b in mem if (FREE not in b)] ) if (FREE in
+                mem[0]) else sum( [len(b) for b in mem[1:] if (FREE not in b)] )
 
         ''' Defragment. '''
-        '''if ( FREE in tmp_mem[0] ):
-            tmp_moved = sum([ len(b) for b in tmp_mem if (FREE not in b) ])
-
-            for block in [ b for b in tmp_mem if (FREE not in tmp_mem) ]:
-                for i in range( len(block) ):
-                    (self._mem).append( block[i] )
-            for block in [ b for b in tmp_mem if (FREE in tmp_mem) ]:
-                for i in range( len(block) ):
-                    (self._mem).append( block[i] )
-            self._mem = [ l for l in self._mem if (l != FREE) ] + [ l for l in self._mem if (l == FREE) ]
-
-        else:
-            tmp_moved = sum([ len(b) for b in tmp_mem[1 :] if (FREE not in b) ])
-            self._mem = [ l for l in tmp_mem[0] ] + [ l for l in (s for s in (b
-                    for b in tmp_mem[1 :] if (FREE not in b))) ] + [ l for l in
-                    (s for s in (b for b in tmp_mem[1 :] if (FREE not in b))) ]'''
-
-        tmp = ( sum([ len(b) for b in tmp_mem if (FREE not in b) ]) if
-                (FREE in tmp_mem[0]) else sum([ len(b) for b in tmp_mem[1 :] if
-                (FREE not in b) ]) )
-
         self._mem = [ l for l in self._mem if (l != FREE) ] + [ l for l in
                 self._mem if (l == FREE) ]
         self._tick += tmp * T_MEMMOVE
         self._last = (self._mem).index( FREE )
 
         print( ("time {}ms: Defragmentation complete (moved {} frames: "
-                "{})\n{}").format( self._tick, tmp, ", ".join( [sorted(set(p))
-                for p in ( (s for s in tmp_mem if (FREE not in s)) if (FREE in
-                tmp_mem[0]) else (s for s in tmp_mem[1 :] if (FREE not in s)) )
-                ][0] ), self ) )
-
-        """tmp = len([ l for l in self._mem if (l != FREE) ]) * T_MEMMOVE
-
-        ''' Defragment. '''
-        self._mem = [ l for l in self._mem if (l != FREE) ] + [ l for l in
-                self._mem if (l == FREE) ]
-        self._tick += tmp
-        self._last = (self._mem).index( FREE )"""
+                "{})\n{}").format( self._tick, tmp, (", ".join( list(
+                odict.fromkeys("".join( list( filter(lambda obj : obj != FREE,
+                "".join(mem)) ) )) ) )) if (FREE in mem[0]) else (", ".join(
+                list( odict.fromkeys("".join( list( filter(lambda obj : obj !=
+                FREE, "".join(mem[1:])) ) )) ) )), self ) )
 
         ''' Increment arrival times. '''
-        for i in range( len(self._procs) ):
-            for j in range( len((self._procs[i])._times) ):
-                (self._procs[i])._times[j] = ((self._procs[i])._times[j][0] +
-                (tmp * T_MEMMOVE), (self._procs[i])._times[j][1])
+        self._procs = [ Process(p._pid, p._size, (deque([ ((t[0] + (tmp *
+                T_MEMMOVE)), t[1]) for t in p._times ]))) for p in self._procs ]
 
 
     """
@@ -293,6 +185,7 @@ class Simulator:
     def remove( self ):
         for proc in [ p for p, r in (self._remain).items() if (r == 0) ]:
             ''' Remove from memory and running; change last-accesed. '''
+            ''' self._last = (self._mem).index( proc._pid ) '''
             self._mem = [ (self._mem[i] if self._mem[i] != proc._pid else FREE)
                     for i in range(FRAMES) ]
             del self._remain[proc]
@@ -346,7 +239,7 @@ Contiguous, next-fit simulation.
 def c_next( procs ):
     sim = Simulator( procs )
     print( "time {}ms: Simulator started (Contiguous -- Next-Fit)".format(
-            sim.get_tick()) )
+            sim._tick) )
 
     while 1:
         ''' Remove completed Processes. '''
@@ -360,37 +253,29 @@ def c_next( procs ):
         ''' Add new Processes. '''
         for proc in arrived:
             print( "time {}ms: Process {} arrived (requires {} frames)".format(
-                    sim.get_tick(), proc[0].get_pid(), proc[0].get_size()) )
+                    sim._tick, proc[0]._pid, proc[0]._size) )
 
             added = sim.c_add( proc, True, False, False )
-            if ( added ):
-                continue
 
-            elif ( (not added) and ( (sim.get_mem()).count(FREE) >=
-                    proc[0].get_size() ) ):
+            if ( (not added) and ( (sim._mem).count(FREE) >= proc[0]._size ) ):
                 ''' not added, but space to place after defrag '''
                 print( ("time {}ms: Cannot place process {} -- starting "
-                        "defragmentation").format(sim.get_tick(),
-                        proc[0].get_pid()) )
+                        "defragmentation").format(sim._tick,
+                        proc[0]._pid) )
+
                 sim.defrag()
-                """tmp = [ l for l in sim.get_mem() if (l != FREE) ]
-                print( ("time {}ms: Defragmentation complete (moved {} frames: "
-                        "{})\n{}").format( sim.get_tick(), len(tmp), ", ".join(
-                        p for p in sorted( set(tmp) ) ), sim ) )"""
-
                 added = sim.c_add( proc, True, False, False )
-                if ( added ):
-                    continue
 
-            ''' not added, skip '''
-            print ( "time {}ms: Cannot place process {} -- "
-                    "skipped!".format(sim._tick, proc[0]._pid) )
+            if ( not added ):
+                ''' not added, skip '''
+                print ( "time {}ms: Cannot place process {} -- skipped!".format(
+                        sim._tick, proc[0]._pid) )
 
         ''' Decrement all run times and tick. '''
         sim.tick()
 
     print( "time {}ms: Simulator ended (Contiguous -- Next-Fit)\n".format(
-            sim.get_tick()) )
+            sim._tick) )
 
 
 """
@@ -400,7 +285,7 @@ Contiguous, best-fit simulation.
 def c_best( procs ):
     sim = Simulator( procs )
     print( "time {}ms: Simulator started (Contiguous -- Best-Fit)".format(
-            sim.get_tick()) )
+            sim._tick) )
 
     while 1:
         ''' Remove completed Processes. '''
@@ -414,37 +299,29 @@ def c_best( procs ):
         ''' Add new Processes. '''
         for proc in arrived:
             print( "time {}ms: Process {} arrived (requires {} frames)".format(
-                    sim.get_tick(), proc[0].get_pid(), proc[0].get_size()) )
+                    sim._tick, proc[0]._pid, proc[0]._size) )
 
             added = sim.c_add( proc, False, True, False )
-            if ( added ):
-                continue
 
-            elif ( (not added) and ( (sim.get_mem()).count(FREE) >=
-                    proc[0].get_size() ) ):
+            if ( (not added) and ( (sim._mem).count(FREE) >= proc[0]._size ) ):
                 ''' not added, but space to place after defrag '''
                 print( ("time {}ms: Cannot place process {} -- starting "
-                        "defragmentation").format(sim.get_tick(),
-                        proc[0].get_pid()) )
+                        "defragmentation").format(sim._tick,
+                        proc[0]._pid) )
+
                 sim.defrag()
-                """tmp = [ l for l in sim.get_mem() if (l != FREE) ]
-                print( ("time {}ms: Defragmentation complete (moved {} frames: "
-                        "{})\n{}").format( sim.get_tick(), len(tmp), ", ".join(
-                        p for p in sorted( set(tmp) ) ), sim ) )"""
-
                 added = sim.c_add( proc, False, True, False )
-                if ( added ):
-                    continue
 
-            ''' not added, skip '''
-            print ( "time {}ms: Cannot place process {} -- "
-                    "skipped!".format(sim._tick, proc[0]._pid) )
+            if ( not added ):
+                ''' not added, skip '''
+                print ( "time {}ms: Cannot place process {} -- skipped!".format(
+                        sim._tick, proc[0]._pid) )
 
         ''' Decrement all run times and tick. '''
         sim.tick()
 
     print( "time {}ms: Simulator ended (Contiguous -- Best-Fit)\n".format(
-            sim.get_tick()) )
+            sim._tick) )
 
 
 """
@@ -454,7 +331,7 @@ Contiguous, worst-fit simulation.
 def c_worst( procs ):
     sim = Simulator( procs )
     print( "time {}ms: Simulator started (Contiguous -- Worst-Fit)".format(
-            sim.get_tick()) )
+            sim._tick) )
 
     while 1:
         ''' Remove completed Processes. '''
@@ -468,37 +345,29 @@ def c_worst( procs ):
         ''' Add new Processes. '''
         for proc in arrived:
             print( "time {}ms: Process {} arrived (requires {} frames)".format(
-                    sim.get_tick(), proc[0].get_pid(), proc[0].get_size()) )
+                    sim._tick, proc[0]._pid, proc[0]._size) )
 
             added = sim.c_add( proc, False, False, True )
-            if ( added ):
-                continue
 
-            elif ( (not added) and ( (sim.get_mem()).count(FREE) >=
-                    proc[0].get_size() ) ):
+            if ( (not added) and ( (sim._mem).count(FREE) >= proc[0]._size ) ):
                 ''' not added, but space to place after defrag '''
                 print( ("time {}ms: Cannot place process {} -- starting "
-                        "defragmentation").format(sim.get_tick(),
-                        proc[0].get_pid()) )
+                        "defragmentation").format(sim._tick,
+                        proc[0]._pid) )
+
                 sim.defrag()
-                """tmp = [ l for l in sim.get_mem() if (l != FREE) ]
-                print( ("time {}ms: Defragmentation complete (moved {} frames: "
-                        "{})\n{}").format( sim.get_tick(), len(tmp), ", ".join(
-                        p for p in sorted( set(tmp) ) ), sim ) )"""
-
                 added = sim.c_add( proc, False, False, True )
-                if ( added ):
-                    continue
 
-            ''' not added, skip '''
-            print ( "time {}ms: Cannot place process {} -- "
-                    "skipped!".format(sim._tick, proc[0]._pid) )
+            if ( not added ):
+                ''' not added, skip '''
+                print ( "time {}ms: Cannot place process {} -- skipped!".format(
+                        sim._tick, proc[0]._pid) )
 
         ''' Decrement all run times and tick. '''
         sim.tick()
 
     print( "time {}ms: Simulator ended (Contiguous -- Worst-Fit)\n".format(
-            sim.get_tick()) )
+            sim._tick) )
 
 
 """
@@ -507,22 +376,22 @@ Non-contiguous simulation.
 """
 def non_c( procs ):
     sim = Simulator( procs )
-    print( "time {}ms: Simulator started (Non-contiguous)".format(sim.get_tick()) )
+    print( "time {}ms: Simulator started (Non-contiguous)".format(sim._tick) )
 
     ''' simulation code '''
 
-    print( "time {}ms: Simulator ended (Non-contiguous)".format(sim.get_tick()) )
+    print( "time {}ms: Simulator ended (Non-contiguous)".format(sim._tick) )
 
 
 ''' Main. ------------------------------------------------------------------ '''
 
 if ( __name__ == "__main__" ):
-    if ( len(sys.argv) == 2 ):
+    if ( len(argv) == 2 ):
         ''' Check for valid input file. '''
         try:
-            f = open( sys.argv[1], 'r' )
+            f = open( argv[1], 'r' )
         except:
-            sys.exit( "ERROR: Input file could not be opened" )
+            exit( "ERROR: Input file could not be opened" )
 
         ''' Read in and store as Processes. '''
         procs = []
@@ -533,7 +402,7 @@ if ( __name__ == "__main__" ):
                         '/')[0]), int(t.split('/')[1]) ) for t in line[2:] ]) )
                 procs.append( tmp )
             except:
-                sys.exit( "ERROR: Invalid input file format" )
+                exit( "ERROR: Invalid input file format" )
 
         ''' Run simulations. '''
         c_next( procs )
@@ -541,8 +410,8 @@ if ( __name__ == "__main__" ):
         c_worst( procs )
         ''' non_c( procs ) '''
 
-        sys.exit()
+        exit()
 
     else:
         ''' too few/many arguments '''
-        sys.exit( "ERROR: Invalid argument(s)\nUSAGE: ./a.out <input-file>" )
+        exit( "ERROR: Invalid argument(s)\nUSAGE: ./a.out <input-file>" )
