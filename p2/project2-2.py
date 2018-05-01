@@ -195,6 +195,7 @@ class Simulator:
             tmp[i] = "".join(l for l in block)
 
             self._mem = []
+            # self._mem = [ [l for l in b] for b in tmp ]
             for b in tmp:
                 for l in b:
                     (self._mem).append( l )
@@ -225,31 +226,40 @@ class Simulator:
     def defrag( self ):
         tmp_mem = [ "".join(g) for k, g in itertools.groupby( "".join(l for l in
                 self._mem), key=lambda obj : (obj != FREE) ) ]
-        tmp_moved = 0
+        #tmp_moved = sum([ len(b) for b in tmp_mem if (FREE not in b) ]) if (FREE in tmp_mem[0]) else sum([ len(b) for b in tmp_mem[1 :] if (FREE not in b) ])
 
         ''' Defragment. '''
-        if ( FREE in tmp_mem[0] ):
+        '''if ( FREE in tmp_mem[0] ):
             tmp_moved = sum([ len(b) for b in tmp_mem if (FREE not in b) ])
-            '''self._mem = [ list(l) for l in ( b for b in tmp_mem if (FREE
-                    not in b) ) ] + [ list(l) for l in ( b for b in tmp_mem
-                    if (FREE in b) ) ]'''
-            self._mem = [ list("".join(b)) for b in tmp_mem if (FREE not in tmp_mem) ] \
-                    + [ list("".join(b)) for b in tmp_mem if (FREE in tmp_mem) ]
+
+            for block in [ b for b in tmp_mem if (FREE not in tmp_mem) ]:
+                for i in range( len(block) ):
+                    (self._mem).append( block[i] )
+            for block in [ b for b in tmp_mem if (FREE in tmp_mem) ]:
+                for i in range( len(block) ):
+                    (self._mem).append( block[i] )
+            self._mem = [ l for l in self._mem if (l != FREE) ] + [ l for l in self._mem if (l == FREE) ]
+
         else:
             tmp_moved = sum([ len(b) for b in tmp_mem[1 :] if (FREE not in b) ])
             self._mem = [ l for l in tmp_mem[0] ] + [ l for l in (s for s in (b
                     for b in tmp_mem[1 :] if (FREE not in b))) ] + [ l for l in
-                    (s for s in (b for b in tmp_mem[1 :] if (FREE not in b))) ]
+                    (s for s in (b for b in tmp_mem[1 :] if (FREE not in b))) ]'''
 
-        print(self._mem)
-        self._tick += tmp_moved * T_MEMMOVE
+        tmp = ( sum([ len(b) for b in tmp_mem if (FREE not in b) ]) if
+                (FREE in tmp_mem[0]) else sum([ len(b) for b in tmp_mem[1 :] if
+                (FREE not in b) ]) )
+
+        self._mem = [ l for l in self._mem if (l != FREE) ] + [ l for l in
+                self._mem if (l == FREE) ]
+        self._tick += tmp * T_MEMMOVE
         self._last = (self._mem).index( FREE )
 
         print( ("time {}ms: Defragmentation complete (moved {} frames: "
-                "{})\n{}").format( self._tick, tmp_moved, ", ".join(
-                p for p in sorted( set( l for l in (b for b in tmp_mem) ) ) ),
-                self ) )
-
+                "{})\n{}").format( self._tick, tmp, ", ".join( [sorted(set(p))
+                for p in ( (s for s in tmp_mem if (FREE not in s)) if (FREE in
+                tmp_mem[0]) else (s for s in tmp_mem[1 :] if (FREE not in s)) )
+                ][0] ), self ) )
 
         """tmp = len([ l for l in self._mem if (l != FREE) ]) * T_MEMMOVE
 
@@ -263,7 +273,7 @@ class Simulator:
         for i in range( len(self._procs) ):
             for j in range( len((self._procs[i])._times) ):
                 (self._procs[i])._times[j] = ((self._procs[i])._times[j][0] +
-                (tmp_moved * T_MEMMOVE), (self._procs[i])._times[j][1])
+                (tmp * T_MEMMOVE), (self._procs[i])._times[j][1])
 
 
     """
@@ -527,8 +537,8 @@ if ( __name__ == "__main__" ):
 
         ''' Run simulations. '''
         c_next( procs )
-        ''' c_best( procs ) '''
-        ''' c_worst( procs ) '''
+        c_best( procs )
+        c_worst( procs )
         ''' non_c( procs ) '''
 
         sys.exit()
