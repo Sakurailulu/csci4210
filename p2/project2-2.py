@@ -76,8 +76,12 @@ class Simulator:
         ''' Non-variable initializing values. '''
         self._last = 0
         self._mem = [ FREE for i in range(FRAMES) ]
+        self._NC_memory = FREE*FRAMES
+        self._TLB = {}
         self._remain = ddict( int )
         self._tick = 0
+        for x in range(256):
+            self._TLB[x] = (FREE,0)
 
 
     ''' Accessors. --------------------------------------------------------- '''
@@ -171,9 +175,101 @@ class Simulator:
     """
     Modifier to non-contiguously add new Process.
     """
-    def n_add( self, proc ):
-        return 0
+    def non_c_add( self, proc):
+        added = False
+        if(self._NC_memory.count(FREE)>= proc[0]._size):
+            count = proc[0]._size
+            for x in range(256):
+                if(self._NC_memory[x] == FREE):
+                    self._NC_memory = self._NC_memory[:x] + proc[0]._pid + self._NC_memory[x+1:] 
+                    #self._NC_memory[x] = proc[0]._pid
+                    self._TLB[x] = ('A',proc[0]._size - count)
+                    count -=1
+                if(count <=0):
+                    break
+            self._remain[ proc[0] ] = proc[1]
+            added = True
+            print( "time {}ms: Placed process {}:".format(self._tick,
+                    proc[0]._pid) )
+            #self.NC_Print
+            
+            print("================================")
+            for x in range(8):
+                print(self._NC_memory[32*x:(32*x)+32])
+            print("================================")
+            #self.print_page_TLB
+            print("PAGE TABLE [page,frame]:")
+            pids = []
+            for proc in [p for p, r in (self._remain).items()]:
+                pids.append(proc._pid)
+            for pid in sorted(pids):
+                occurances = []
+                #tmp = proc._pid + ": "
+                for x in range(256):
+                    if(self._NC_memory[x] == pid):
+                        occurances.append((self._TLB[x][1],x))
+                        #tmp = tmp + '[' + str(self._TLB[x][1]) + ',' + str(x) + "] "
+                count = len(occurances)
+                occurances = sorted(occurances, key=lambda tup: tup[1], reverse = True)
+                tmp = pid + ": "
+                while(count >0):
+                    for i in range(10):
+                        if(count<=0):
+                            break 
+                        else:
+                            if(i == 0):
+                                tmp = tmp + "[" + str(occurances[count-1][0]) + "," + str(occurances[count-1][1]) + "]"
+                            else:
+                                tmp = tmp + " [" + str(occurances[count-1][0]) + "," + str(occurances[count-1][1]) + "]"
+                        count-=1
+                    print(tmp)
+                    tmp = ""
+        return added
+     """
+    Modifier to non-contiguously remove Process.
+    """
+    def non_c_remove(self):
+        for proc in [ p for p, r in (self._remain).items() if (r == 0) ]:
+                for x in range(256):
+                    if(self._NC_memory[x] == proc._pid):
+                        self._NC_memory = self._NC_memory[:x] + FREE + self._NC_memory[x+1:] 
+                        self._TLB[x] = (FREE,0)
+                print( "time {}ms: Process {} removed:".format(self._tick,
+                    proc._pid) )
+                #self.NC_Print
+                print("================================")
+                for x in range(8):
+                    print(self._NC_memory[32*x:(32*x)+32])
+                print("================================")
+                print("PAGE TABLE [page,frame]:")
+                #self.print_page_TLB
 
+                del self._remain[proc]
+                pids = []
+                for proc in [p for p, r in (self._remain).items()]:
+                    pids.append(proc._pid)
+                for pid in sorted(pids):
+                    occurances = []
+                    #tmp = proc._pid + ": "
+                    for x in range(256):
+                        if(self._NC_memory[x] == pid):
+                            occurances.append((self._TLB[x][1],x))
+                            #tmp = tmp + '[' + str(self._TLB[x][1]) + ',' + str(x) + "] "
+                    count = len(occurances)
+                    occurances = sorted(occurances, key=lambda tup: tup[1], reverse = True)
+                    tmp = pid + ": "
+                    while(count >0):
+                        for i in range(10):
+                            if(count<=0):
+                                break 
+                            else:
+                                if(i == 0):
+                                    tmp = tmp + "[" + str(occurances[count-1][0]) + "," + str(occurances[count-1][1]) + "]"
+                                else:
+                                    tmp = tmp + " [" + str(occurances[count-1][0]) + "," + str(occurances[count-1][1]) + "]"
+                            count-=1
+                        print(tmp)
+                        tmp = ""
 
     """
     Modifier to remove process from running in memory.
@@ -379,7 +475,31 @@ def non_c( procs ):
     print( "time {}ms: Simulator started (Non-contiguous)".format(sim._tick) )
 
     ''' simulation code '''
+    while 1:
+        ''' Remove done processes. '''
+        sim.non_c_remove()
 
+        ''' Check for simulation completion. '''
+        arrived = sim.arrived()
+        if ( (not arrived) and (not sim._remain) ):
+            break
+
+        ''' Added new processes. '''
+        for proc in arrived:
+            print( "time {}ms: Process {} arrived (requires {} frames)".format(
+                    sim._tick, proc[0]._pid, proc[0]._size) )
+
+            added = sim.non_c_add( proc)
+            if ( added ):
+                continue
+
+            else: 
+                ''' not added : skip process '''
+                print ( "time {}ms: Cannot place process {} -- "
+                    "skipped!".format(sim._tick, proc[0]._pid) )
+
+        ''' Decrement all run times and tick. '''
+        sim.tick()
     print( "time {}ms: Simulator ended (Non-contiguous)".format(sim._tick) )
 
 
@@ -408,7 +528,7 @@ if ( __name__ == "__main__" ):
         c_next( procs )
         c_best( procs )
         c_worst( procs )
-        ''' non_c( procs ) '''
+        non_c( procs )
 
         exit()
 
