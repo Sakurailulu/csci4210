@@ -108,7 +108,15 @@ class Simulator:
 
         return sorted( tmp, key = lambda obj : obj[0]._pid )
 
+    def not_arrived( self ):
+        tmp = []
+        for proc in [ p for p in self._procs if ( (p._times) and (p._times[0][0]
+                >= self._tick) ) ]:
+            tmp.append( ( proc, proc._times[0] ) )
 
+        return sorted( tmp, key = lambda obj : obj[0]._pid )
+
+    
     ''' Modifiers. --------------------------------------------------------- '''
 
     """
@@ -358,7 +366,8 @@ def c_next( procs ):
 
         ''' Check for simulation completion. '''
         arrived = sim.arrived()
-        if ( (not arrived) and (not sim._remain) ):
+        not_arrived = sim.not_arrived()
+        if ( (not arrived) and (not sim._remain) and (len(not_arrived)==0)):
             break
 
         ''' Add new Processes. '''
@@ -404,7 +413,8 @@ def c_best( procs ):
 
         ''' Check for simulation completion. '''
         arrived = sim.arrived()
-        if ( (not arrived) and (not sim._remain) ):
+        not_arrived = sim.not_arrived()
+        if ( (not arrived) and (not sim._remain) and (len(not_arrived)==0)):
             break
 
         ''' Add new Processes. '''
@@ -450,7 +460,8 @@ def c_worst( procs ):
 
         ''' Check for simulation completion. '''
         arrived = sim.arrived()
-        if ( (not arrived) and (not sim._remain) ):
+        not_arrived = sim.not_arrived()
+        if ( (not arrived) and (not sim._remain) and (len(not_arrived)==0)):
             break
 
         ''' Add new Processes. '''
@@ -496,7 +507,8 @@ def non_c( procs ):
 
         ''' Check for simulation completion. '''
         arrived = sim.arrived()
-        if ( (not arrived) and (not sim._remain) ):
+        not_arrived = sim.not_arrived()
+        if ( (not arrived) and (not sim._remain) and (len(not_arrived)==0)):
             break
 
         ''' Added new processes. '''
