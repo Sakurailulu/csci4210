@@ -4,346 +4,499 @@
 Griffin Melnick, melnig@rpi.edu
 Peter Straub, straup@rpi.edu
 
-    Program info...
+Memory management simulation using next-fit, best-fit, and worst-fit contiguous
+algorithms and a non-contiguous algorithm. Run by calling
 
-        bash$ python3 project2.py ...
+    bash$ python3 project2.py <input-file>
 
-    Options...
+                    OR
+
+    bash$ ./project2.py <input-file>    (if Python3 path matches shebang at top)
+
+where <input-file> is a text file with properly formatted process details.
 """
 
-from collections import defaultdict as ddict
-from collections import deque
+from collections import defaultdict as ddict, deque, OrderedDict as odict
+from copy import deepcopy
 from itertools import groupby
-import copy
-import sys
+from sys import argv, exit
 
 FRAMES = 256
 FREE = '.'
 PER_LINE = 32
 T_MEMMOVE = 1
 
-''' Block helper class. ---------------------------------------------------- '''
 
-class Block:
+''' Wrapper class for process management. ---------------------------------- '''
 
-    ''' Constructors. ------------------------------------------------------ '''
+class Process:
 
     """
-    Default constructor.
-    :param:     tag, identifier (True or False) for if segment contains process
-                mem, process in Block or FREE
+    Constructor.
+    :param:     pid, Process ID value
+                size, amount of space taken in memory
+                time, deque of arrival and run times
     """
-    def __init__( self, tag=False, mem=(FREE*FRAMES) ):
-        self._tag = tag
-        self._mem = mem
+    def __init__( self, pid, size, times ):
+        self._pid = deepcopy( pid )
+        self._size = deepcopy( size )
+        self._times = deepcopy( times )
+        self._start = 0
 
 
     ''' Overidden methods. ------------------------------------------------- '''
 
     """
-    Repr representation of Block.
-    :return:    string with all variable shown as respective repr outputs
+    Repr representation.
+    :return:    string with repr representation of all members
     """
     def __repr__( self ):
-        return "Block(_tag = {0}, _mem = {1})".format( repr(self._tag),
-                repr(self._mem) )
-
-
-    """
-    String representation of Block.
-    :return:    _mem
-    """
-    def __str__( self ):
-        return self._mem
-
-
-''' Process helper class. -------------------------------------------------- '''
-
-class Process:
-
-    ''' Constructors. ------------------------------------------------------ '''
-
-    """
-    Default contructor.
-    :param:     pid, process id (single letter A-Z)
-                size, memory space taken
-                times, OrderDict of arrival times mapped to run times
-    """
-    def __init__( self, pid, size, times ):
-        self._pid = copy.deepcopy( pid )
-        self._size = copy.deepcopy( size )
-        self._times = copy.deepcopy( times )
-
-
-    ''' Overriden methods. ------------------------------------------------- '''
-
-    """
-    Repr representation of Process.
-    :return:    string with all variables shown as respective repr outputs
-    """
-    def __repr__( self ):
-        return "Process(_pid = {0}, _size = {1}, _times = {2})".format(
+        return "Process(_pid={0}, _size={1}, _times={2})".format(
                 repr(self._pid), repr(self._size), repr(self._times) )
 
 
     """
-    String representation of Process.
-    :return:    string with Process _pid, _size times
+    String representation.
+    :return:    string of _pid, _size times
     """
     def __str__( self ):
-        return "{0}".format( str(self._pid) * self._size )
+        return "{0}".format(self._pid * self._size)
+
+    def __cmp__(self,other):
+
+        if(other._pid<self._start):
+            return True
+        elif(other._start==self._start):
+            return cmp(other._pid,self._pid)
+        else:
+            return False
 
 
-''' Simluator helper class. ------------------------------------------------ '''
+''' Wrapper class for simluation. ------------------------------------------ '''
 
 class Simulator:
 
-    ''' Constructors. ------------------------------------------------------ '''
-
     """
-    Default constructor.
-    :param:     procs, list of Processes pulled from input file.
+    Constructor.
+    :param:     procs, deep-copied list of Processes in simulator
     """
     def __init__( self, procs ):
-        self._procs = copy.deepcopy( procs )
-        self._curr = 0
-        self._memory = [ Block() ]
-        self._running = ddict( int )
+        self._procs = deepcopy( procs )
+
+        ''' Non-variable initializing values. '''
+        self._last = 0
+        self._mem = [ FREE for i in range(FRAMES) ]
+        self._NC_memory = FREE*FRAMES
+        self._TLB = {}
+        self._remain = ddict( int )
         self._tick = 0
+        for x in range(256):
+            self._TLB[x] = (FREE,0)
 
 
-    ''' Class methods. ----------------------------------------------------- '''
+    ''' Accessors. --------------------------------------------------------- '''
 
     """
-    Helper method to check new Processes for arrival.
-    :return:    sorted list with tuples of new Processes and respective times
+    Accessor to find arriving Processes.
+    :return:    list of arrived Processes sorted by _pid
     """
     def arrived( self ):
         tmp = []
         for proc in [ p for p in self._procs if ( (p._times) and (p._times[0][0]
                 == self._tick) ) ]:
-            tmp.append( ( proc, (proc._times).popleft() ) )
+            tmp.append( ( proc, (proc._times).popleft()[1] ) )
 
         return sorted( tmp, key = lambda obj : obj[0]._pid )
 
 
+    ''' Modifiers. --------------------------------------------------------- '''
+
     """
-    Helper method to added new Processes for contiguous simulations.
-    :param:     proc, Process to add
-                next, boolean if running c_next()
-                best, boolean if running c_best()
-                worst, boolean if running c_worst()
-    :return:    True if added, False otherwise
+    Modifier to contiguously add new Process.
+    :modifies:  _mem, _remain, _last
+    :effects:   (to _mem) adds Process according to simluation
+                (to _remain) adds Process mapped to full run time
+                (to _last) sets to just past the end of Process
     """
     def c_add( self, proc, next=False, best=False, worst=False ):
+        p, rem = proc[0], proc[1]
+        if ( next ):
+            tmp = [ "".join(g) for k, g in groupby("".join(l for l in
+                    self._mem[self._last : FRAMES])) ] + [ "".join(g) for k, g
+                    in groupby("".join(l for l in self._mem[0 : self._last])) ]
+
+        else:
+            tmp = [ "".join(g) for k, g in groupby( "".join(l for l in
+                    self._mem) ) ]
+
         added = False
-        tmp = [ self._memory[(i % len(self._memory))] for i in range( self._curr
-                + len(self._memory) ) ]
-        for block in sorted( [ b for b in tmp if ( (not b._tag) and
-                (len(b._mem) >= proc[0]._size) ) ], key=lambda l : (
-                len(l._mem) if (not next) else (not len(l._mem)) ),
-                reverse=worst ):
-            i = (self._memory).index( block )
-            tmp = len(block._mem) - proc[0]._size
+        for block in sorted( [ b for b in tmp if ( (FREE in b) and (len(b) >=
+                p._size) ) ], key=lambda l : (len(l) if (not next) else (not
+                len(l)) ), reverse=worst ):
+            tmp[ tmp.index(block) ] = "{}{}".format( str(p), ( FREE * (len(block) - p._size) ) )
 
-            ''' Changed stored memory. '''
-            self._memory[i] = Block( True, (proc[0]._pid * proc[0]._size) )
-            (self._memory).insert( (i + 1), Block( False, (FREE * tmp) ) )
+            self._mem = ( list( "".join(tmp) ) if (not next) else (list(
+                    "".join(tmp) )[(FRAMES - self._last) : FRAMES] + list(
+                    "".join(tmp) )[0 : (FRAMES - self._last)]) )
+            self._remain[ p ] = rem
+            self._last = max([ i for i, l in enumerate(self._mem) if (l ==
+                    p._pid) ]) + 1
 
-            ''' Manage in _running. '''
-            self._running[ proc[0] ] = proc[1][1]
-
-            added = True
             print( "time {}ms: Placed process {}:\n{}".format(self._tick,
-                    proc[0]._pid, self) )
-            # self._curr = (self._memory).index( block )
+                    p._pid, self) )
+
+            added = ( (self._mem).count(p._pid) == p._size )
             break
 
         return added
 
 
     """
-    Helper method for defragmenting.
-    :modifies:  _memory
-    :effects:   moves all FREE memory to end of list
+    Modifier to defragment memory.
+    :modifies:  _mem, _tick, _last
+    :effects:   (to _mem) moves all Processes to start
+                (to _tick) increases by frames times T_MEMMOVE
+                (to _last) sets to first occurence of FREE
     """
     def defrag( self ):
-        self._memory = list( [ b for b in self._memory if (b._tag) ] + [ b for
-                b in self._memory if (not b._tag) ] )
+        mem = [ "".join(g) for k, g in groupby( "".join(l for l in self._mem),
+                key=lambda obj : (obj != FREE) ) ]
+        tmp = sum( [len(b) for b in mem if (FREE not in b)] ) if (FREE in
+                mem[0]) else sum( [len(b) for b in mem[1:] if (FREE not in b)] )
 
-        ''' maybe add check for process arrival '''
-        tmp = sum( len(b._mem) for b in self._memory if (b._tag) )
+        ''' Defragment. '''
+        self._mem = [ l for l in self._mem if (l != FREE) ] + [ l for l in
+                self._mem if (l == FREE) ]
         self._tick += tmp * T_MEMMOVE
-        print( "time {}ms: Defragmentation complete (moved {} frames: "
-                "{})".format( self._tick, tmp, ", ".join(b._mem[0] for b in
-                self._memory if (b._tag)) ) )
-        self._curr = len(self._memory) - 1
+        self._last = (self._mem).index( FREE )
+
+        print( ("time {}ms: Defragmentation complete (moved {} frames: "
+                "{})\n{}").format( self._tick, tmp, (", ".join( list(
+                odict.fromkeys("".join( list( filter(lambda obj : obj != FREE,
+                "".join(mem)) ) )) ) )) if (FREE in mem[0]) else (", ".join(
+                list( odict.fromkeys("".join( list( filter(lambda obj : obj !=
+                FREE, "".join(mem[1:])) ) )) ) )), self ) )
+
+        ''' Increment arrival times. '''
+        self._procs = [ Process(p._pid, p._size, (deque([ ((t[0] + (tmp *
+                T_MEMMOVE)), t[1]) for t in p._times ]))) for p in self._procs ]
 
 
     """
-    Helper method to remove finished processes.
-    :modifies:  _memory, _running
-    :effects:   (to _memory) removes respective Block
-                (to _running) deletes Process
+    Modifier to non-contiguously add new Process.
+    """
+    def non_c_add( self, proc):
+        added = False
+        proc[0]._start = self._tick
+        if(self._NC_memory.count(FREE)>= proc[0]._size):
+            count = proc[0]._size
+            for x in range(256):
+                if(self._NC_memory[x] == FREE):
+                    self._NC_memory = self._NC_memory[:x] + proc[0]._pid + self._NC_memory[x+1:] 
+                    #self._NC_memory[x] = proc[0]._pid
+                    self._TLB[x] = ('A',proc[0]._size - count)
+                    count -=1
+                if(count <=0):
+                    break
+            self._remain[ proc[0] ] = proc[1]
+            added = True
+            print( "time {}ms: Placed process {}:".format(self._tick,
+                    proc[0]._pid) )
+            #self.NC_Print
+            
+            print("================================")
+            for x in range(8):
+                print(self._NC_memory[32*x:(32*x)+32])
+            print("================================")
+            #self.print_page_TLB
+            print("PAGE TABLE [page,frame]:")
+            pids = []
+            for proc in [p for p, r in (self._remain).items()]:
+                pids.append(proc._pid)
+            for pid in sorted(pids):
+                occurances = []
+                #tmp = proc._pid + ": "
+                for x in range(256):
+                    if(self._NC_memory[x] == pid):
+                        occurances.append((self._TLB[x][1],x))
+                        #tmp = tmp + '[' + str(self._TLB[x][1]) + ',' + str(x) + "] "
+                count = len(occurances)
+                occurances = sorted(occurances, key=lambda tup: tup[1], reverse = True)
+                tmp = pid + ": "
+                while(count >0):
+                    for i in range(10):
+                        if(count<=0):
+                            break 
+                        else:
+                            if(i == 0):
+                                tmp = tmp + "[" + str(occurances[count-1][0]) + "," + str(occurances[count-1][1]) + "]"
+                            else:
+                                tmp = tmp + " [" + str(occurances[count-1][0]) + "," + str(occurances[count-1][1]) + "]"
+                        count-=1
+                    print(tmp)
+                    tmp = ""
+        return added
+    """
+    Modifier to non-contiguously remove Process.
+    """
+    def non_c_remove(self):
+        procs = []
+        for proc in [ p for p, r in sorted((self._remain).items(),key = lambda Process: (Process[0]._start, Process[0]._pid)) if (r == 0) ]:
+            procs.append(proc)
+        
+        for proc in procs:
+                for x in range(256):
+                    if(self._NC_memory[x] == proc._pid):
+                        self._NC_memory = self._NC_memory[:x] + FREE + self._NC_memory[x+1:] 
+                        self._TLB[x] = (FREE,0)
+                print( "time {}ms: Process {} removed:".format(self._tick,
+                    proc._pid) )
+                #self.NC_Print
+                print("================================")
+                for x in range(8):
+                    print(self._NC_memory[32*x:(32*x)+32])
+                print("================================")
+                print("PAGE TABLE [page,frame]:")
+                #self.print_page_TLB
+
+                del self._remain[proc]
+                pids = []
+                for proc in [p for p, r in (self._remain).items()]:
+                    pids.append(proc._pid)
+                for pid in sorted(pids):
+                    occurances = []
+                    #tmp = proc._pid + ": "
+                    for x in range(256):
+                        if(self._NC_memory[x] == pid):
+                            occurances.append((self._TLB[x][1],x))
+                            #tmp = tmp + '[' + str(self._TLB[x][1]) + ',' + str(x) + "] "
+                    count = len(occurances)
+                    occurances = sorted(occurances, key=lambda tup: tup[1], reverse = True)
+                    tmp = pid + ": "
+                    while(count >0):
+                        for i in range(10):
+                            if(count<=0):
+                                break 
+                            else:
+                                if(i == 0):
+                                    tmp = tmp + "[" + str(occurances[count-1][0]) + "," + str(occurances[count-1][1]) + "]"
+                                else:
+                                    tmp = tmp + " [" + str(occurances[count-1][0]) + "," + str(occurances[count-1][1]) + "]"
+                            count-=1
+                        print(tmp)
+                        tmp = ""
+
+    """
+    Modifier to remove process from running in memory.
+    :modifies:  _last, _mem, _remain
+    :effects:   (to _last) sets to start of last-removed Process
+                (to _mem) removes all Process strings
+                (to _remain) removes all Process trackers
     """
     def remove( self ):
-        for proc in [ p for p, r in (self._running).items() if (r == 0) ]:
-            ''' Delete process block from memory. '''
-            for block in [ b for b in self._memory if (b._mem == str(proc)) ]:
-                self._memory[ (self._memory).index(block) ] = Block( False,
-                        (FREE * proc._size) )
+        for proc in [ p for p, r in sorted((self._remain).items(),key = lambda Process: (Process[0]._start, Process[0]._pid)) if (r == 0) ]:
+            ''' Remove from memory and running; change last-accesed. '''
+            ''' self._last = (self._mem).index( proc._pid ) '''
+            self._mem = [ (self._mem[i] if self._mem[i] != proc._pid else FREE)
+                    for i in range(FRAMES) ]
+            del self._remain[proc]
 
+            ''' Notify. '''
             print( "time {}ms: Process {} removed:\n{}".format(self._tick,
                     proc._pid, self) )
-
-            ''' Remove from running. '''
-            del self._running[proc]
 
 
     """
     Helper method to increment time.
-    :modifies:  _running, _tick
-    :effects:   (to _running) decrements all remaining time (values)
+    :modifies:  _remain, _tick
+    :effects:   (to _remain) decrements all remaining time (values)
                 (to _tick) increments
     """
     def tick( self ):
-        for proc, rem in (self._running).items():
-            self._running[proc] = rem - 1
+        for proc, rem in (self._remain).items():
+            self._remain[proc] -= 1
 
         self._tick += 1
 
 
-    ''' Overridden methods. ------------------------------------------------ '''
+    ''' Overidden methods. ------------------------------------------------- '''
 
     """
-    Repr representation of Simulator.
-    :return:    string with all variables shown with respective repr outputs
+    Repr representation.
+    :return:    string with repr representation of all members
     """
     def __repr__( self ):
-        return "Simulator(_procs = {0}, _memory = {1}, _tick = {2})".format(
-                repr(self._procs), repr(self._memory), repr(self._tick) )
+        return ("Simulator(_procs={0}, _last={1}, _mem={2}, _remain={3}, "
+                "_tick={4})").format( repr(self._procs), repr(self._last),
+                repr(self._mem), repr(self._remain), repr(self._tick) )
 
 
     """
-    String representation of Simulator.
-    :return:    string representation of memory space as a frame
+    String representation.
+    :return:    framed output of simulator memory
     """
     def __str__( self ):
-        return "{0}\n{1}\n{0}".format( ('=' * PER_LINE), "\n".join( "".join( l
-                for l in ("".join( b._mem for b in self._memory ))[(PER_LINE *
-                i) : PER_LINE * (i+1)] ) for i in range(FRAMES // PER_LINE) ) )
+        return "{0}\n{1}\n{0}".format( ('=' * PER_LINE), "\n".join( "".join(
+                line for line in ("".join( let for let in self._mem ))[(PER_LINE
+                * i) : PER_LINE * (i+1)]) for i in range(FRAMES // PER_LINE) ) )
 
 
-''' Methods. --------------------------------------------------------------- '''
+''' Simulation methods. ---------------------------------------------------- '''
 
 """
 Contiguous, next-fit simulation.
-:param:     procs, list of Processes to simulate
+:param:     procs, list of Processes used in simulation.
 """
 def c_next( procs ):
-    sim = Simulator( copy.deepcopy(procs) )
-    print( "time {}ms: Simulator started (Contiguous -- Next-fit)".format(
+    sim = Simulator( procs )
+    print( "time {}ms: Simulator started (Contiguous -- Next-Fit)".format(
             sim._tick) )
 
     while 1:
-        ''' Remove done processes. '''
+        ''' Remove completed Processes. '''
         sim.remove()
 
         ''' Check for simulation completion. '''
         arrived = sim.arrived()
-        if ( (not arrived) and (not sim._running) ):
+        if ( (not arrived) and (not sim._remain) ):
             break
 
-        ''' Added new processes. '''
+        ''' Add new Processes. '''
         for proc in arrived:
             print( "time {}ms: Process {} arrived (requires {} frames)".format(
                     sim._tick, proc[0]._pid, proc[0]._size) )
 
             added = sim.c_add( proc, True, False, False )
-            if ( added ):
-                continue
 
-            elif ( (not added) and ( sum( len(b._mem) for b in sim._memory if
-                    (not b._tag) ) >= proc[0]._size ) ):
+            if ( (not added) and ( (sim._mem).count(FREE) >= proc[0]._size ) ):
+                ''' not added, but space to place after defrag '''
+                print( ("time {}ms: Cannot place process {} -- starting "
+                        "defragmentation").format(sim._tick,
+                        proc[0]._pid) )
+
                 sim.defrag()
                 added = sim.c_add( proc, True, False, False )
 
-                if ( added ):
-                    continue
-
-            ''' not added : skip process '''
-            print ( "time {}ms: Cannot place process {} -- "
-                    "skipped!".format(sim._tick, proc[0]._pid) )
+            if ( not added ):
+                ''' not added, skip '''
+                print ( "time {}ms: Cannot place process {} -- skipped!".format(
+                        sim._tick, proc[0]._pid) )
 
         ''' Decrement all run times and tick. '''
         sim.tick()
 
-    print( "time {}ms: Simulator ended (Contiguous -- Next-fit)\n".format(
+    print( "time {}ms: Simulator ended (Contiguous -- Next-Fit)\n".format(
             sim._tick) )
 
 
 """
 Contiguous, best-fit simulation.
-:param:     procs, list of Processes to simulate
+:param:     procs, list of Processes used in simulation.
 """
 def c_best( procs ):
-    sim = Simulator( copy.deepcopy(procs) )
-    print( "time {}ms: Simulator started (Contiguous -- Best-fit)".format(
+    sim = Simulator( procs )
+    print( "time {}ms: Simulator started (Contiguous -- Best-Fit)".format(
             sim._tick) )
 
     while 1:
-        ''' Remove done processes. '''
+        ''' Remove completed Processes. '''
         sim.remove()
 
         ''' Check for simulation completion. '''
         arrived = sim.arrived()
-        if ( (not arrived) and (not sim._running) ):
+        if ( (not arrived) and (not sim._remain) ):
             break
 
-        ''' Added new processes. '''
+        ''' Add new Processes. '''
         for proc in arrived:
             print( "time {}ms: Process {} arrived (requires {} frames)".format(
                     sim._tick, proc[0]._pid, proc[0]._size) )
 
             added = sim.c_add( proc, False, True, False )
-            if ( added ):
-                continue
 
-            elif ( (not added) and ( sum( len(b._mem) for b in sim._memory if
-                    (not b._tag) ) >= proc[0]._size ) ):
+            if ( (not added) and ( (sim._mem).count(FREE) >= proc[0]._size ) ):
+                ''' not added, but space to place after defrag '''
+                print( ("time {}ms: Cannot place process {} -- starting "
+                        "defragmentation").format(sim._tick,
+                        proc[0]._pid) )
+
                 sim.defrag()
                 added = sim.c_add( proc, False, True, False )
 
-                if ( added ):
-                    continue
-
-            ''' not added : skip process '''
-            print ( "time {}ms: Cannot place process {} -- "
-                    "skipped!".format(sim._tick, proc[0]._pid) )
+            if ( not added ):
+                ''' not added, skip '''
+                print ( "time {}ms: Cannot place process {} -- skipped!".format(
+                        sim._tick, proc[0]._pid) )
 
         ''' Decrement all run times and tick. '''
         sim.tick()
 
-    print( "time {}ms: Simulator ended (Contiguous -- Best-fit)\n".format(
+    print( "time {}ms: Simulator ended (Contiguous -- Best-Fit)\n".format(
             sim._tick) )
 
 
 """
 Contiguous, worst-fit simulation.
-:param:     procs, list of Processes to simulate
+:param:     procs, list of Processes used in simulation.
 """
 def c_worst( procs ):
-    sim = Simulator( copy.deepcopy(procs) )
-    print( "time {}ms: Simulator started (Contiguous -- Worst-fit)".format(
+    sim = Simulator( procs )
+    print( "time {}ms: Simulator started (Contiguous -- Worst-Fit)".format(
             sim._tick) )
 
     while 1:
-        ''' Remove done processes. '''
+        ''' Remove completed Processes. '''
         sim.remove()
 
         ''' Check for simulation completion. '''
         arrived = sim.arrived()
-        if ( (not arrived) and (not sim._running) ):
+        if ( (not arrived) and (not sim._remain) ):
+            break
+
+        ''' Add new Processes. '''
+        for proc in arrived:
+            print( "time {}ms: Process {} arrived (requires {} frames)".format(
+                    sim._tick, proc[0]._pid, proc[0]._size) )
+
+            added = sim.c_add( proc, False, False, True )
+
+            if ( (not added) and ( (sim._mem).count(FREE) >= proc[0]._size ) ):
+                ''' not added, but space to place after defrag '''
+                print( ("time {}ms: Cannot place process {} -- starting "
+                        "defragmentation").format(sim._tick,
+                        proc[0]._pid) )
+
+                sim.defrag()
+                added = sim.c_add( proc, False, False, True )
+
+            if ( not added ):
+                ''' not added, skip '''
+                print ( "time {}ms: Cannot place process {} -- skipped!".format(
+                        sim._tick, proc[0]._pid) )
+
+        ''' Decrement all run times and tick. '''
+        sim.tick()
+
+    print( "time {}ms: Simulator ended (Contiguous -- Worst-Fit)\n".format(
+            sim._tick) )
+
+
+"""
+Non-contiguous simulation.
+:param:     procs, list of Processes used in simulation.
+"""
+def non_c( procs ):
+    sim = Simulator( procs )
+    print( "time {}ms: Simulator started (Non-contiguous)".format(sim._tick) )
+
+    ''' simulation code '''
+    while 1:
+        ''' Remove done processes. '''
+        sim.non_c_remove()
+
+        ''' Check for simulation completion. '''
+        arrived = sim.arrived()
+        if ( (not arrived) and (not sim._remain) ):
             break
 
         ''' Added new processes. '''
@@ -351,71 +504,49 @@ def c_worst( procs ):
             print( "time {}ms: Process {} arrived (requires {} frames)".format(
                     sim._tick, proc[0]._pid, proc[0]._size) )
 
-            added = sim.c_add( proc, False, False, True )
+            added = sim.non_c_add( proc)
             if ( added ):
                 continue
 
-            elif ( (not added) and ( sum( len(b._mem) for b in sim._memory if
-                    (not b._tag) ) >= proc[0]._size ) ):
-                sim.defrag()
-                added = sim.c_add( proc, False, False, True )
-
-                if ( added ):
-                    continue
-
-            ''' not added : skip process '''
-            print ( "time {}ms: Cannot place process {} -- "
+            else: 
+                ''' not added : skip process '''
+                print ( "time {}ms: Cannot place process {} -- "
                     "skipped!".format(sim._tick, proc[0]._pid) )
 
         ''' Decrement all run times and tick. '''
         sim.tick()
-
-    print( "time {}ms: Simulator ended (Contiguous -- Worst-fit)\n".format(
-            sim._tick) )
-
-
-"""
-Non-contiguous simulation.
-:param:     procs, list of Processes to simulate
-"""
-def non_c( procs ):
-    sim = Simulator( copy.deepcopy(procs) )
-    print( "time {}ms: Simulator started (Non-contiguous)".format(sim._tick) )
-
-    ''' simulation code '''
-
     print( "time {}ms: Simulator ended (Non-contiguous)".format(sim._tick) )
 
 
 ''' Main. ------------------------------------------------------------------ '''
 
 if ( __name__ == "__main__" ):
-    if ( len(sys.argv) == 2 ):
+    if ( len(argv) == 2 ):
         ''' Check for valid input file. '''
         try:
-            f = open( sys.argv[1], 'r' )
+            f = open( argv[1], 'r' )
         except:
-            sys.exit( "ERROR: Could not open input file" )
+            exit( "ERROR: Input file could not be opened" )
 
-        ''' Read in all processes. '''
+        ''' Read in and store as Processes. '''
         procs = []
-        for l in [m for m in f.readlines() if ((m[0] != '#') and (m != '\n'))]:
-            l = (l.strip()).split()
+        for line in [ (l.strip()).split() for l in f.readlines() if ( (l[0] !=
+                '#') and (l != '\n') ) ]:
             try:
-                tmp = Process( l[0], int(l[1]), deque([ ( int(t.split('/')[0]),
-                        int(t.split('/')[1]) ) for t in l[2:] ]) )
+                tmp = Process( line[0], int(line[1]), deque([ ( int(t.split(
+                        '/')[0]), int(t.split('/')[1]) ) for t in line[2:] ]) )
                 procs.append( tmp )
             except:
-                sys.exit( "ERROR: Invalid input file format" )
+                exit( "ERROR: Invalid input file format" )
 
-        f.close()
-
-        ''' Run individual simluations. '''
+        ''' Run simulations. '''
         c_next( procs )
         c_best( procs )
         c_worst( procs )
         non_c( procs )
 
+        exit()
+
     else:
-        ''' len(sys.argv) != 2 '''
-        sys.exit( "ERROR: Invalid argument(s)\nUSAGE: ./a.out <input-file>" )
+        ''' too few/many arguments '''
+        exit( "ERROR: Invalid argument(s)\nUSAGE: ./a.out <input-file>" )
