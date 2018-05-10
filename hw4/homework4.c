@@ -13,17 +13,22 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-/* Macro defintions for length of user ids and messages. */
+/* Macro defintions. */
 #define BUFFER_MAX 994
 #define ID_MIN 3
 #define ID_MAX 20
+#define TCP "tcp"
+#define UDP "udp"
 #define USER_INC 32
 
 typedef struct {
-    char * _id;
+    char * _id, _connection;
 } User;
 
-unsigned int numTcpUsers = 0, numUdpUsers = 0;
+#define USER_SIZE sizeof( User )
+
+unsigned int numUsers = 0;
+User * users;
 int tcpSd = -1, udpSd = -1, tcpServerLen = -1, udpServerLen = -1;
 struct sockaddr_in tcpServer, udpServer;
 
@@ -97,13 +102,19 @@ int main( int argc, char * argv[] ) {
                 ntohs(udpServer.sin_port) );
         fflush( stdout );
 
+        users = calloc( USER_INC, USER_SIZE );
+
         char tcpBuffer[ BUFFER_MAX ], udpBuffer[ BUFFER_MAX ];
         struct sockaddr_in tcpClient, udpClient;
         int tcpClientLen = sizeof( tcpClient ),
                 udpClientLen = sizeof( udpClient );
+        /* to clear temporary warning */
+        strcat( tcpBuffer, "\0" );
+        tcpClientLen = 0;
         if ( tcpPort != udpPort ) {
             int tcpIn = -1, udpIn = -1;
             while ( 1 ) {
+                if ( ( tcpIn =  ) )
                 if ( ( udpIn = recvfrom(udpSd, udpBuffer, BUFFER_MAX, 0, (struct
                         sockaddr *)&udpClient, (socklen_t *)&udpClientLen) ) <
                         0 ) {
@@ -112,11 +123,53 @@ int main( int argc, char * argv[] ) {
                     printf( "MAIN: Rcvd incoming UDP datagram from: %s\n",
                             inet_ntoa(udpClient.sin_addr) );
                     udpBuffer[ udpIn ] = '\0';
+
+                    char * udpRead = strstr( udpBuffer, "LOGIN" );
+                    if ( udpRead == udpBuffer ) {
+
+                    }
+
+                    udpRead = strstr( udpBuffer, "WHO" );
+                    if ( udpRead == udpBuffer ) {
+                        int tmp = 3 + ( ID_MAX * (numUsers + 1) );
+                        char whoBuffer[ tmp ];
+                        strcat( whoBuffer, "OK\n" );
+                        for ( int i = 0; i < numUsers; ++i ) {
+                            strcat( whoBuffer, strcat( users[i]._id, "\n" ) );
+                        }
+                        strcat( whoBuffer, "\0" );
+
+                        if ( ( sendto(udpSd, whoBuffer, tmp, 0, (struct sockaddr
+                                *)&udpClient, udpClientLen) ) < 0 ) {
+                            fprintf( stderr, "MAIN: ERROR UDP sendto() failed"
+                                    "\n" );
+                        }
+                    }
+
+                    udpRead = strstr( udpBuffer, "LOGOUT" );
+                    if ( udpRead == udpBuffer ) {
+
+                    }
+
+                    udpRead = strstr( udpBuffer, "SEND" );
+                    if ( udpRead == udpBuffer ) {
+
+                    }
+
+                    udpRead = strstr( udpBuffer, "BROADCAST" );
+                    if ( udpRead == udpBuffer ) {
+
+                    }
+
+                    udpRead = strstr( udpBuffer, "SHARE" );
+                    if ( udpRead == udpBuffer ) {
+
+                    }
                 }
             }
         } else {
             /* need to use select() calls */
-            int in = -1;
+            /* int in = -1; */
             while ( 1 ) {
                 /* ... */
             }
